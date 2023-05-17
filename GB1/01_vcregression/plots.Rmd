@@ -1,0 +1,70 @@
+---
+title: "Vcregression"
+output: html_document
+date: "2023-04-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+```
+
+
+Scatter plots of the original vs. smoothed values:
+# GB1
+```{r}
+data_orig = read.csv("../00_data/output/GB1_data_processed.csv", header=TRUE)
+data_smoothed = read.csv("output/map.txt", header=TRUE)
+colnames(data_smoothed)[1] = "Variants"
+data = merge(data_orig, data_smoothed)
+
+p_gb1 = ggplot(data, aes(x=LogFitness, y=phenotype)) +
+  geom_bin2d(bins=50) +
+  theme_test() + geom_abline(intercept=0, slope=1, linetype="dashed", color="gray") +
+  scale_fill_viridis_c() +
+  labs(x="Raw fitness", y="Inferred fitness", title="GB1") +
+  theme(legend.position="bottom")
+```
+
+# ParE2
+```{r}
+data_orig = read.csv("../../ParE2/00_data/output/ParE2_data_processed.csv", header=FALSE)
+colnames(data_orig) = c("Variants", "Fitness", "Var")
+data_smoothed = read.csv("../../ParE2/01_vcregression/output/map.txt", header=TRUE)
+colnames(data_smoothed)[1] = "Variants"
+data = merge(data_orig, data_smoothed)
+
+p_pare2 = ggplot(data, aes(x=Fitness, y=phenotype)) +
+  geom_bin2d(bins=50) +
+  theme_test() + geom_abline(intercept=0, slope=1, linetype="dashed", color="gray") +
+  scale_fill_viridis_c() +
+  labs(x="Raw fitness", y="Inferred fitness", title="ParE2") +
+  theme(legend.position="bottom")
+```
+
+# ParE3
+```{r}
+data_orig = read.csv("../../ParE3/00_data/output/ParE3_data_processed.csv", header=FALSE)
+colnames(data_orig) = c("Variants", "Fitness", "Var")
+data_smoothed = read.csv("../../ParE3/01_vcregression/output/map.txt", header=TRUE)
+colnames(data_smoothed)[1] = "Variants"
+data = merge(data_orig, data_smoothed)
+
+p_pare3 = ggplot(data, aes(x=Fitness, y=phenotype)) +
+  geom_bin2d(bins=50) +
+  theme_test() + geom_abline(intercept=0, slope=1, linetype="dashed", color="gray") +
+  scale_fill_viridis_c() +
+  labs(x="Raw fitness", y="Inferred fitness", title="ParE3") +
+  theme(legend.position="bottom")
+```
+
+# Combine
+```{r}
+ggarrange(p_gb1, p_pare2, p_pare3,
+          ncol=3, labels=c("A", "B", "C"))
+#ggsave("../../manuscript/figures/suppfig_vcreg.jpg", width=10, height=3.5)
+```

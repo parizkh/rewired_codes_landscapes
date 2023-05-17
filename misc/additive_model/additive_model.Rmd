@@ -1,0 +1,107 @@
+---
+title: "Modelling GB1 and the ParD3 landscapes using an additive model"
+author: "Hana"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width=12)
+```
+
+```{r}
+aas = c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y")
+```
+
+
+
+# GB1
+Read the data:
+```{r}
+data_gb1 = read.csv("../../GB1/01_vcregression/output/map.txt", stringsAsFactors = FALSE)
+```
+
+Create a data frame with 80 dummy variables (4 positions x 20 amino acis) and the scores:
+```{r}
+df_gb1 = data.frame(matrix(0, nrow=nrow(data_gb1), ncol=81))
+colnames(df_gb1) = c("Score", paste0(rep(c(1,2,3,4), each=20), rep(c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y"), 4)))
+
+for (i in 1:nrow(data_gb1)) {
+  genotype = data_gb1$sequence[i]
+  df_gb1$Score[i] = data_gb1$phenotype[i]
+  for (j in 1:4) {
+    col = paste0(j, substr(genotype, j, j))
+    df_gb1[i,col] = 1
+  }
+}
+```
+
+Fit a linear model:
+```{r}
+model_gb1 = lm(Score ~ ., data=df_gb1)
+summary(model_gb1)
+```
+
+The linear model explains ca 52.5 % of variance.
+
+
+
+# ParD3
+## ParE3
+Read the data:
+```{r}
+data_pare3 = read.csv("../../ParE3/01_vcregression/output/map.txt", stringsAsFactors = FALSE)
+```
+
+Create a data frame with 80 dummy variables (3 positions x 20 amino acis) and the scores:
+```{r}
+df_pare3 = data.frame(matrix(0, nrow=nrow(data_pare3), ncol=61))
+colnames(df_pare3) = c("Score", paste0(rep(c(1,2,3), each=20), rep(c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y"), 3)))
+
+for (i in 1:nrow(data_pare3)) {
+  genotype = data_pare3$sequence[i]
+  df_pare3$Score[i] = data_pare3$phenotype[i]
+  for (j in 1:3) {
+    col = paste0(j, substr(genotype, j, j))
+    df_pare3[i,col] = 1
+  }
+}
+```
+
+Fit a linear model:
+```{r}
+model_pare3 = lm(Score ~ ., data=df_pare3)
+summary(model_pare3)
+```
+
+The linear model explains ca 85.6 % of variance.
+
+
+## ParE2
+Read the data:
+```{r}
+data_pare2 = read.csv("../../ParE2/01_vcregression/output/map.txt", stringsAsFactors = FALSE)
+```
+
+Create a data frame with 80 dummy variables (3 positions x 20 amino acis) and the scores:
+```{r}
+df_pare2 = data.frame(matrix(0, nrow=nrow(data_pare2), ncol=61))
+colnames(df_pare2) = c("Score", paste0(rep(c(1,2,3), each=20), rep(c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y"), 3)))
+
+for (i in 1:nrow(data_pare2)) {
+  genotype = data_pare2$sequence[i]
+  df_pare2$Score[i] = data_pare2$phenotype[i]
+  for (j in 1:3) {
+    col = paste0(j, substr(genotype, j, j))
+    df_pare2[i,col] = 1
+  }
+}
+```
+
+Fit a linear model:
+```{r}
+model_pare2 = lm(Score ~ ., data=df_pare2)
+summary(model_pare2)
+```
+
+The linear model explains ca 84.5 % of variance.
+

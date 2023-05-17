@@ -1,0 +1,69 @@
+---
+title: "Artificial inflation of the GB1 landscape ruggedness"
+output: html_document
+date: "2023-01-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+```
+
+## Adding random peaks
+```{r}
+# the original ruggedness results
+res_ruggedness = read.delim("../output/results/results", header=FALSE)
+colnames(res_ruggedness) = c("Seed", "SplitAa", "Robustness", "NumPeaks", "MeanPeakHeight", "NoEpi", "MagEpi", "SsEpi", "RsEpi", "PropAccPaths")
+
+# mean global peak accessibility among the 1,000 least and most robust codes
+mean_leastRobust = mean(res_ruggedness$PropAccPaths[order(res_ruggedness$Robustness)][1:1000])
+mean_mostRobust = mean(res_ruggedness$PropAccPaths[order(res_ruggedness$Robustness, decreasing=TRUE)][1:1000])
+diff = mean_mostRobust - mean_leastRobust
+
+# results of the artificial peak inflation
+res_peaks = read.delim("output_peaks", header = FALSE)
+colnames(res_peaks) = c("numPeaksAdded", "Seed", "x", "NumPeaks", "MeanPeakHeight", "NoEpi", "MagEpi", "SsEpi", "RsEpi", "PropAccPaths")
+
+# minimum and maximum number of peaks
+min(res_peaks$NumPeaks)
+max(res_peaks$NumPeaks)
+
+# correlation of number of peaks with accessibility of the global peak
+cor.test(res_peaks$NumPeaks, res_peaks$PropAccPaths)
+
+# plot
+ggplot(res_peaks, aes(x=NumPeaks, y=PropAccPaths)) + geom_point(alpha=0.2,  size=0.5) + theme_test() +
+  geom_hline(yintercept=res_ruggedness$PropAccPaths[res_ruggedness$Seed==0], linetype="dashed") + 
+  geom_hline(yintercept=res_ruggedness$PropAccPaths[res_ruggedness$Seed==0] - diff, linetype="dashed") +
+  geom_vline(xintercept = quantile(res_ruggedness$NumPeaks, 0.01), linetype="dashed") + 
+  geom_vline(xintercept = quantile(res_ruggedness$NumPeaks, 0.99), linetype="dashed") +
+  labs(x="Number of peaks", y="Accessibility of the global peak")
+```
+
+
+
+## Adding random RS epistasis
+```{r}
+res_rsEpi = read.delim("output_rsEpi", header = FALSE)
+colnames(res_rsEpi) = c("numPeaksAdded", "Seed", "x", "NumPeaks", "MeanPeakHeight", "NoEpi", "MagEpi", "SsEpi", "RsEpi", "PropAccPaths")
+
+# the prevalence of RS epistasis ranges between
+min(res_rsEpi$RsEpi)
+max(res_rsEpi$RsEpi)
+
+# correlation of RS epistasis prevalence and accessibility of the global peak
+cor.test(res_rsEpi$RsEpi, res_rsEpi$PropAccPaths)
+
+# plot
+ggplot(res_rsEpi, aes(x=RsEpi, y=PropAccPaths)) + geom_point(alpha=0.2, size=0.5) + theme_test() +
+  geom_hline(yintercept=res_ruggedness$PropAccPaths[res_ruggedness$Seed==0], linetype="dashed") + 
+  geom_hline(yintercept=res_ruggedness$PropAccPaths[res_ruggedness$Seed==0] - diff, linetype="dashed") +
+  geom_vline(xintercept = quantile(res_ruggedness$RsEpi, 0.01), linetype="dashed") + 
+  geom_vline(xintercept = quantile(res_ruggedness$RsEpi, 0.99), linetype="dashed") +
+  labs(x="Prevalence of reciprocal-sign epistasis", y="Accessibility of the global peak")
+```
+

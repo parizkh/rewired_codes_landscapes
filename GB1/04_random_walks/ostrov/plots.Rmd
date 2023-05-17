@@ -1,0 +1,323 @@
+---
+title: "GB1, Ostrov codes, random walk"
+author: "Hana Rozhonova"
+date: "7/1/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(stringr)
+library(ggplot2)
+library(gridExtra)
+library(ggpubr)
+library("viridis")
+library(data.table)
+```
+
+# Read the data
+```{r}
+if (file.exists("output/results_10000/results_processed.tsv")) {
+  results = read.delim("output/results_10000/results_processed.tsv", header=TRUE)
+  results$numSplitBlocks = as.factor(results$numSplitBlocks)
+  results$numStop = as.factor(results$numStop)
+} else {
+  results = read.delim("output/results_10000/results", header=FALSE)
+  colnames(results) = c("Id", "Block1", "Block2", "Block3", "Block4", "X", "Z", "B", "J", "Robustness", paste0("Fitness_", seq(0,990,by=10)))
+   # number of split codon blocks
+  results$numSplitBlocks = as.factor(apply(results, 1, function(x) sum(x[c("X", "Z", "B", "J")]!="-")))
+  # number of stop codons
+  results$numStop = as.factor(3 - (results$Block2!="-") + 2*apply(results, 1, function(x) sum(x[c("Block1", "Block3", "Block4")]=="O")))
+  
+  write.table(results, file="output/results_10000/results_processed.tsv", quote=FALSE, sep="\t", row.names=FALSE)
+}
+```
+
+# Correlations between code robustness and mean fitness
+Correlation test
+```{r}
+cor.test(results$Robustness, results$Fitness_500)
+```
+
+Restrict to only those codes where the size of the summit is the same as in the SGC and the summit is not split:
+```{r}
+results$nCodons_W = 1+2*(results$Block1=="W") + 1*(results$Block2=="W") + 2*(results$Block3=="W") + 2*(results$Block4=="W")
+results$nCodons_L = 6-2*(results$Block1!="-")+1*(results$Block2=="L") 
+results$nCodons_A = 4+2*(results$Block3=="A") + 2*(results$Block4=="A")
+results$SummitSize = (results$nCodons_W**2) * results$nCodons_A * results$nCodons_L
+
+results$splitW = rowSums(results[,6:9]=="W" )
+results$splitL = rowSums(results[,6:9]=="L")
+results$splitA = rowSums(results[,6:9]=="A")
+
+tmp_results = results[results$SummitSize==results$SummitSize[results$Id=="standard"] &
+                results$splitA==0 & results$splitL==0 & results$splitW==0,]
+
+cor.test(tmp_results$Fitness_500, tmp_results$Robustness)
+```
+
+# Effect of number of split codon blocks
+```{r}
+means = c()
+maxs = c()
+mins = c()
+steps = c()
+numSplits = c()
+for (numSplit in unique(results$numSplitBlocks)) {
+  tmp = results[results$numSplitBlocks==numSplit,]
+  for (i in seq(0,990,10)) {
+    m = mean(tmp[,(i/10)+11])
+    means = c(means, m)
+    sd = sd(tmp[,(i/10)+11])
+    mins = c(mins, m-sd)
+    maxs = c(maxs, m+sd)
+    steps = c(steps, i)
+  }
+  numSplits = c(numSplits, rep(numSplit, 100))
+}
+data = data.frame(numSteps = steps,
+                  mean = means,
+                  min = mins,
+                  max = maxs,
+                  numSplit = numSplits)
+data$numSplit = as.factor(data$numSplit)
+
+ggplot(data, aes(x=numSteps, y=mean, color=numSplit, fill=numSplit)) + 
+  geom_line(size=0.4) + 
+  #geom_ribbon(aes(ymin=data$min, ymax=data$max), alpha=0.1) +
+  scale_color_viridis_d() + scale_fill_viridis_d() +
+  theme_test()
+
+ggplot(data, aes(x=numSteps, y=mean, color=numSplit, fill=numSplit)) + 
+  geom_line(size=0.4) + 
+  #geom_ribbon(aes(ymin=data$min, ymax=data$max), alpha=0.1) +
+  scale_color_viridis_d() + scale_fill_viridis_d() +
+  theme_test() +
+  xlim(c(100,250)) + ylim(0.2,0.8)
+```
+
+Correlation between number of split codon blocks and fitness:
+```{r}
+cors = c()
+pvals = c()
+for (i in 11:110) {
+  test = cor.test(as.numeric(results$numSplitBlocks), results[,i])
+  cors = c(cors, test$estimate)
+  pvals = c(pvals, test$p.value)
+}
+data = data.frame(numSteps = seq(0,990,10),
+                  cor = cors,
+                  pval = pvals)
+(p_cor = ggplot(data, aes(x=numSteps, y=cor)) +
+  geom_point() +
+  geom_line() +
+  theme_test())
+
+p_pval = ggplot(data, aes(x=numSteps, y=pval)) +
+  geom_point() +
+  geom_line() +
+  theme_test()
+
+grid.arrange(p_cor, p_pval, ncol=2)
+```
+
+Only codes that preserve the size of the global peak:
+```{r}
+cor.test(as.numeric(tmp_results$numSplitBlocks), tmp_results$Fitness_500)
+```
+
+# Effect of number of stop codons
+```{r}
+means = c()
+maxs = c()
+mins = c()
+steps = c()
+stops = c()
+for (numStop in unique(results$numStop)) {
+  tmp = results[results$numStop==numStop,]
+  for (i in seq(0,990,10)) {
+    m = mean(tmp[,(i/10)+11])
+    means = c(means, m)
+    sd = sd(tmp[,(i/10)+11])
+    mins = c(mins, m-sd)
+    maxs = c(maxs, m+sd)
+    steps = c(steps, i)
+  }
+  stops = c(stops, rep(numStop, 100))
+}
+data = data.frame(numSteps = steps,
+                  mean = means,
+                  min = mins,
+                  max = maxs,
+                  numStop = stops)
+data$numStop = as.factor(data$numStop)
+
+ggplot(data, aes(x=numSteps, y=mean, color=numStop, fill=numStop)) + 
+  geom_line(size=0.4) + 
+  scale_color_viridis_d() + scale_fill_viridis_d() +
+  theme_test()
+```
+
+```{r}
+for (nsplit in unique(tmp_results$numSplitBlocks)) {
+  print(nsplit)
+  tmp_tmp_results = tmp_results[tmp_results$numSplitBlocks==nsplit,]
+  print(cor.test(as.numeric(tmp_tmp_results$numStop), tmp_tmp_results$Fitness_500))
+}
+```
+
+Repeat for N=10, N=100 and N=1,000,000.
+
+# N=10
+# Read the data
+```{r}
+if (file.exists("output/results_10/results_processed.tsv")) {
+  results = read.delim("output/results_10/results_processed.tsv", header=TRUE)
+  results$numSplitBlocks = as.factor(results$numSplitBlocks)
+  results$numStop = as.factor(results$numStop)
+} else {
+  results = read.delim("output/results_10/results", header=FALSE)
+  colnames(results) = c("Id", "Block1", "Block2", "Block3", "Block4", "X", "Z", "B", "J", "Robustness", paste0("Fitness_", seq(0,990,by=10)))
+   # number of split codon blocks
+  results$numSplitBlocks = as.factor(apply(results, 1, function(x) sum(x[c("X", "Z", "B", "J")]!="-")))
+  # number of stop codons
+  results$numStop = as.factor(3 - (results$Block2!="-") + 2*apply(results, 1, function(x) sum(x[c("Block1", "Block3", "Block4")]=="O")))
+  
+  write.table(results, file="output/results_10/results_processed.tsv", quote=FALSE, sep="\t", row.names=FALSE)
+}
+```
+
+Restrict to only those codes where the size of the summit is the same as in the SGC and the summit is not split:
+```{r}
+results$nCodons_W = 1+2*(results$Block1=="W") + 1*(results$Block2=="W") + 2*(results$Block3=="W") + 2*(results$Block4=="W")
+results$nCodons_L = 6-2*(results$Block1!="-")+1*(results$Block2=="L") 
+results$nCodons_A = 4+2*(results$Block3=="A") + 2*(results$Block4=="A")
+results$SummitSize = (results$nCodons_W**2) * results$nCodons_A * results$nCodons_L
+
+results$splitW = rowSums(results[,6:9]=="W" )
+results$splitL = rowSums(results[,6:9]=="L")
+results$splitA = rowSums(results[,6:9]=="A")
+
+tmp_results = results[results$SummitSize==results$SummitSize[results$Id=="standard"] &
+                results$splitA==0 & results$splitL==0 & results$splitW==0,]
+
+cor.test(tmp_results$Fitness_500, tmp_results$Robustness)
+```
+
+# Effect of number of split codon blocks
+```{r}
+cor.test(as.numeric(tmp_results$numSplitBlocks), tmp_results$Fitness_500)
+```
+
+# Effect of number of stop codons
+```{r}
+for (nsplit in unique(tmp_results$numSplitBlocks)) {
+  print(nsplit)
+  tmp_tmp_results = tmp_results[tmp_results$numSplitBlocks==nsplit,]
+  print(cor.test(as.numeric(tmp_tmp_results$numStop), tmp_tmp_results$Fitness_500))
+}
+```
+
+# N=100
+# Read the data
+```{r}
+if (file.exists("output/results_100/results_processed.tsv")) {
+  results = read.delim("output/results_100/results_processed.tsv", header=TRUE)
+  results$numSplitBlocks = as.factor(results$numSplitBlocks)
+  results$numStop = as.factor(results$numStop)
+} else {
+  results = read.delim("output/results_100/results", header=FALSE)
+  colnames(results) = c("Id", "Block1", "Block2", "Block3", "Block4", "X", "Z", "B", "J", "Robustness", paste0("Fitness_", seq(0,990,by=10)))
+   # number of split codon blocks
+  results$numSplitBlocks = as.factor(apply(results, 1, function(x) sum(x[c("X", "Z", "B", "J")]!="-")))
+  # number of stop codons
+  results$numStop = as.factor(3 - (results$Block2!="-") + 2*apply(results, 1, function(x) sum(x[c("Block1", "Block3", "Block4")]=="O")))
+  
+  write.table(results, file="output/results_100/results_processed.tsv", quote=FALSE, sep="\t", row.names=FALSE)
+}
+```
+
+Restrict to only those codes where the size of the summit is the same as in the SGC and the summit is not split:
+```{r}
+results$nCodons_W = 1+2*(results$Block1=="W") + 1*(results$Block2=="W") + 2*(results$Block3=="W") + 2*(results$Block4=="W")
+results$nCodons_L = 6-2*(results$Block1!="-")+1*(results$Block2=="L") 
+results$nCodons_A = 4+2*(results$Block3=="A") + 2*(results$Block4=="A")
+results$SummitSize = (results$nCodons_W**2) * results$nCodons_A * results$nCodons_L
+
+results$splitW = rowSums(results[,6:9]=="W" )
+results$splitL = rowSums(results[,6:9]=="L")
+results$splitA = rowSums(results[,6:9]=="A")
+
+tmp_results = results[results$SummitSize==results$SummitSize[results$Id=="standard"] &
+                results$splitA==0 & results$splitL==0 & results$splitW==0,]
+
+cor.test(tmp_results$Fitness_500, tmp_results$Robustness)
+```
+
+# Effect of number of split codon blocks
+```{r}
+cor.test(as.numeric(tmp_results$numSplitBlocks), tmp_results$Fitness_500)
+```
+
+# Effect of number of stop codons
+```{r}
+for (nsplit in unique(tmp_results$numSplitBlocks)) {
+  print(nsplit)
+  tmp_tmp_results = tmp_results[tmp_results$numSplitBlocks==nsplit,]
+  print(cor.test(as.numeric(tmp_tmp_results$numStop), tmp_tmp_results$Fitness_500))
+}
+```
+
+
+# N=1,000,000
+# Read the data
+```{r}
+if (file.exists("output/results_1000000/results_processed.tsv")) {
+  results = read.delim("output/results_1000000/results_processed.tsv", header=TRUE)
+  results$numSplitBlocks = as.factor(results$numSplitBlocks)
+  results$numStop = as.factor(results$numStop)
+} else {
+  results = read.delim("output/results_1000000/results", header=FALSE)
+  colnames(results) = c("Id", "Block1", "Block2", "Block3", "Block4", "X", "Z", "B", "J", "Robustness", paste0("Fitness_", seq(0,990,by=10)))
+   # number of split codon blocks
+  results$numSplitBlocks = as.factor(apply(results, 1, function(x) sum(x[c("X", "Z", "B", "J")]!="-")))
+  # number of stop codons
+  results$numStop = as.factor(3 - (results$Block2!="-") + 2*apply(results, 1, function(x) sum(x[c("Block1", "Block3", "Block4")]=="O")))
+  
+  write.table(results, file="output/results_1000000/results_processed.tsv", quote=FALSE, sep="\t", row.names=FALSE)
+}
+```
+
+Restrict to only those codes where the size of the summit is the same as in the SGC and the summit is not split:
+```{r}
+results$nCodons_W = 1+2*(results$Block1=="W") + 1*(results$Block2=="W") + 2*(results$Block3=="W") + 2*(results$Block4=="W")
+results$nCodons_L = 6-2*(results$Block1!="-")+1*(results$Block2=="L") 
+results$nCodons_A = 4+2*(results$Block3=="A") + 2*(results$Block4=="A")
+results$SummitSize = (results$nCodons_W**2) * results$nCodons_A * results$nCodons_L
+
+results$splitW = rowSums(results[,6:9]=="W" )
+results$splitL = rowSums(results[,6:9]=="L")
+results$splitA = rowSums(results[,6:9]=="A")
+
+tmp_results = results[results$SummitSize==results$SummitSize[results$Id=="standard"] &
+                results$splitA==0 & results$splitL==0 & results$splitW==0,]
+
+cor.test(tmp_results$Fitness_500, tmp_results$Robustness)
+```
+
+# Effect of number of split codon blocks
+```{r}
+cor.test(as.numeric(tmp_results$numSplitBlocks), tmp_results$Fitness_500)
+```
+
+# Effect of number of stop codons
+```{r}
+for (nsplit in unique(tmp_results$numSplitBlocks)) {
+  print(nsplit)
+  tmp_tmp_results = tmp_results[tmp_results$numSplitBlocks==nsplit,]
+  print(cor.test(as.numeric(tmp_tmp_results$numStop), tmp_tmp_results$Fitness_500))
+}
+```

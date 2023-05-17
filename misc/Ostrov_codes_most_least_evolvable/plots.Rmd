@@ -1,0 +1,299 @@
+---
+title: "Most and least evolvable Ostrov codes"
+output: html_document
+date: "2022-10-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggvenn)
+library(ggplot2)
+library(viridisLite)
+library(ggpubr)
+```
+
+# Read the greedy simulation results
+```{r}
+res_gb1 = read.delim("../../GB1/03_greedy_walks/ostrov/output/results_processed.tsv")
+res_pare2 = read.delim("../../ParE2/03_greedy_walks/ostrov/output/results_processed.tsv")
+res_pare3 = read.delim("../../ParE3/03_greedy_walks/ostrov/output/results_processed.tsv")
+```
+
+
+# Correlation between code performance on different data sets
+```{r}
+cor.test(res_gb1$MeanFitness, res_pare2$MeanFitness)
+cor.test(res_gb1$MeanFitness, res_pare3$MeanFitness)
+cor.test(res_pare3$MeanFitness, res_pare2$MeanFitness)
+```
+
+# The best 20% of codes, in terms of fitness, for each data set
+```{r}
+res_gb1 = res_gb1[order(res_gb1$MeanFitness),]
+bestCodes_gb1 = res_gb1[ceiling(0.8*194481):194481,]
+res_pare2 = res_pare2[order(res_pare2$MeanFitness),]
+bestCodes_pare2 = res_pare2[ceiling(0.8*194481):194481,]
+res_pare3 = res_pare3[order(res_pare3$MeanFitness),]
+bestCodes_pare3 = res_pare3[ceiling(0.8*194481):194481,]
+```
+
+# Venn diagram of the best 20% of codes
+```{r}
+x <- list(
+  GB1 = bestCodes_gb1$Id,
+  ParE2 = bestCodes_pare2$Id,
+  ParE3 = bestCodes_pare3$Id
+  )
+p_venn = ggvenn(
+  x, 
+  fill_color = viridis(3),
+  stroke_size = 0.5, set_name_size = 4, text_size=2.7
+  )
+```
+
+# Properties of the most evolvable codes
+```{r}
+bestCodes = intersect(intersect(bestCodes_gb1$Id, bestCodes_pare2$Id), bestCodes_pare3$Id)
+res_gb1$BestCode = res_gb1$Id %in% bestCodes
+res_gb1$BestCode = ifelse(res_gb1$BestCode==TRUE, "Consistently high-ranking", "Remaining")
+```
+
+## Robustness
+```{r}
+t.test(Robustness ~ BestCode, res_gb1)
+
+
+p_rob = ggplot(res_gb1, aes(x=Robustness, fill=BestCode, color=BestCode)) +
+  facet_grid(rows=vars(BestCode)) + 
+  geom_histogram(aes(y=..density..), alpha=0.5, bins=23) +
+  theme_test() +
+  scale_color_manual(values=c("grey", "#afb860"), name="") +
+  scale_fill_manual(values=c("grey", "#afb860"), name="") +
+  labs(x="Code robustness", y="Density") +
+  theme(
+  strip.background = element_blank(),
+  strip.text.y = element_blank()
+)
+```
+
+## Number of split codon blocks
+```{r}
+t.test(numSplitBlocks ~ BestCode, res_gb1)
+
+p_numSplit = ggplot(res_gb1, aes(x=numSplitBlocks, fill=BestCode, color=BestCode)) +
+  facet_grid(rows=vars(BestCode)) + 
+  geom_histogram(aes(y=..density..), alpha=0.5, bins=5) +
+  theme_test() +
+  scale_color_manual(values=c("grey", "#afb860"), name="") +
+  scale_fill_manual(values=c("grey", "#afb860"), name="") +
+  labs(x="Number of split codon blocks", y="Density") +
+  theme(strip.background = element_blank(), strip.text.y = element_blank()
+)
+```
+
+## Number of stop codons
+```{r}
+t.test(numStop ~ BestCode, res_gb1)
+
+
+p_numStop = ggplot(res_gb1, aes(x=numStop, fill=BestCode, color=BestCode)) +
+  facet_grid(rows=vars(BestCode)) + 
+  geom_histogram(aes(y=..density..), alpha=0.5, bins=8) +
+  theme_test() +
+  scale_color_manual(values=c("grey", "#afb860"), name="") +
+  scale_fill_manual(values=c("grey", "#afb860"), name="") +
+  labs(x="Number of stop codons", y="Density") +
+  theme(strip.background = element_blank(), strip.text.y = element_blank()) +
+  scale_x_continuous(breaks=2:9)
+```
+
+## The final plot
+```{r}
+ggarrange(p_venn, 
+          ggarrange(p_rob, p_numSplit, p_numStop,
+          ncol=3, labels=c("B", "C", "D"), common.legend=TRUE, legend="bottom"),
+          ncol=2, labels=c("A", ""), widths=c(1.5,3))
+```
+
+# Well-performing codes
+```{r}
+# the best code - in terms of robustness, number of split codon blocks, number of stop codons
+res_mostRobust = res_gb1[res_gb1$Robustness==max(res_gb1$Robustness) &
+                           res_gb1$BestCode=="Consistently high-ranking",]
+res_gb1[res_gb1$Robustness==max(res_gb1$Robustness) &
+          res_gb1$numSplitBlocks==0 &
+          res_gb1$numStop==2 &
+          res_gb1$BestCode=="Consistently high-ranking",1:10]
+
+# the best codes that would only reassign UAG
+tmp = res_gb1[ res_gb1$Block1=="-" & res_gb1$Block3=="X" & res_gb1$Block4=="-" & res_gb1$Block2!="-" ,]
+tmp[tmp$BestCode=="Consistently high-ranking",1:10]
+```
+
+
+# Least evolvable codes
+## The worst 20% of codes, in terms of fitness, for each data set
+```{r}
+res_gb1 = res_gb1[order(res_gb1$MeanFitness),]
+worstCodes_gb1 = res_gb1[1:ceiling(0.2*194481),]
+res_pare2 = res_pare2[order(res_pare2$MeanFitness),]
+worstCodes_pare2 = res_pare2[1:ceiling(0.2*194481),]
+res_pare3 = res_pare3[order(res_pare3$MeanFitness),]
+worstCodes_pare3 = res_pare3[1:ceiling(0.2*194481),]
+```
+
+## Venn diagram of the worst 20% of codes
+```{r}
+x <- list(
+  GB1 = worstCodes_gb1$Id,
+  ParE2 = worstCodes_pare2$Id,
+  ParE3 = worstCodes_pare3$Id
+  )
+p_venn = ggvenn(
+  x, 
+  fill_color = viridis(3),
+  stroke_size = 0.5, set_name_size = 4, text_size=2.7
+  )
+```
+
+## Properties of the least evolvable codes
+```{r}
+worstCodes = intersect(intersect(worstCodes_gb1$Id, worstCodes_pare2$Id), worstCodes_pare3$Id)
+res_gb1$WorstCode = res_gb1$Id %in% worstCodes
+res_gb1$WorstCode = ifelse(res_gb1$WorstCode==TRUE, "Consistently low-ranking", "Remaining")
+```
+
+## Robustness
+```{r}
+t.test(Robustness ~ WorstCode, res_gb1)
+
+
+p_rob = ggplot(res_gb1, aes(x=Robustness, fill=WorstCode, color=WorstCode)) +
+  facet_grid(rows=vars(WorstCode)) + 
+  geom_histogram(aes(y=..density..), alpha=0.5, bins=23) +
+  theme_test() +
+  scale_color_manual(values=c("grey", "#afb860"), name="") +
+  scale_fill_manual(values=c("grey", "#afb860"), name="") +
+  labs(x="Code robustness", y="Density") +
+  theme(
+  strip.background = element_blank(),
+  strip.text.y = element_blank()
+)
+```
+
+## Number of split codon blocks
+```{r}
+t.test(numSplitBlocks ~ WorstCode, res_gb1)
+
+p_numSplit = ggplot(res_gb1, aes(x=numSplitBlocks, fill=WorstCode, color=WorstCode)) +
+  facet_grid(rows=vars(WorstCode)) + 
+  geom_histogram(aes(y=..density..), alpha=0.5, bins=5) +
+  theme_test() +
+  scale_color_manual(values=c("grey", "#afb860"), name="") +
+  scale_fill_manual(values=c("grey", "#afb860"), name="") +
+  labs(x="Number of split codon blocks", y="Density") +
+  theme(strip.background = element_blank(), strip.text.y = element_blank()
+)
+```
+
+## Number of stop codons
+```{r}
+t.test(numStop ~ WorstCode, res_gb1)
+
+
+p_numStop = ggplot(res_gb1, aes(x=numStop, fill=WorstCode, color=WorstCode)) +
+  facet_grid(rows=vars(WorstCode)) + 
+  geom_histogram(aes(y=..density..), alpha=0.5, bins=8) +
+  theme_test() +
+  scale_color_manual(values=c("grey", "#afb860"), name="") +
+  scale_fill_manual(values=c("grey", "#afb860"), name="") +
+  labs(x="Number of stop codons", y="Density") +
+  theme(strip.background = element_blank(), strip.text.y = element_blank()) +
+  scale_x_continuous(breaks=2:9)
+```
+
+## The final plot
+```{r}
+ggarrange(p_venn, 
+          ggarrange(p_rob, p_numSplit, p_numStop,
+          ncol=3, labels=c("B", "C", "D"), common.legend=TRUE, legend="bottom"),
+          ncol=2, labels=c("A", ""), widths=c(1.5,3))
+```
+
+## Badly-performing codes
+```{r}
+# code with the max number of stop codons
+bad_codes = res_gb1[res_gb1$WorstCode=="Consistently low-ranking",]
+bad_codes[bad_codes$numStop==max(bad_codes$numStop),1:10]
+
+# lowest robustness
+bad_codes[bad_codes$Robustness==min(bad_codes$Robustness),1:10]
+
+# max number of split codon blocks
+tmp = bad_codes[bad_codes$numSplitBlocks==max(bad_codes$numSplitBlocks),]
+# of those, min robustness
+tmp[tmp$Robustness==min(tmp$Robustness),1:10]
+
+# Only UAG changes
+bad_codes[bad_codes$Block1=="-" & bad_codes$Block3=="X" & bad_codes$Block4=="-" & bad_codes$Block2!="-" ,1:10]
+```
+
+## Smaller proportion of worst codes
+```{r}
+# 5%
+res_gb1 = res_gb1[order(res_gb1$MeanFitness),]
+worstCodes_gb1 = res_gb1[1:ceiling(0.05*194481),]
+res_pare2 = res_pare2[order(res_pare2$MeanFitness),]
+worstCodes_pare2 = res_pare2[1:ceiling(0.05*194481),]
+res_pare3 = res_pare3[order(res_pare3$MeanFitness),]
+worstCodes_pare3 = res_pare3[1:ceiling(0.05*194481),]
+
+worstCodes = intersect(intersect(worstCodes_gb1$Id, worstCodes_pare2$Id), worstCodes_pare3$Id)
+length(worstCodes)
+
+# 2%
+res_gb1 = res_gb1[order(res_gb1$MeanFitness),]
+worstCodes_gb1 = res_gb1[1:ceiling(0.02*194481),]
+res_pare2 = res_pare2[order(res_pare2$MeanFitness),]
+worstCodes_pare2 = res_pare2[1:ceiling(0.02*194481),]
+res_pare3 = res_pare3[order(res_pare3$MeanFitness),]
+worstCodes_pare3 = res_pare3[1:ceiling(0.02*194481),]
+
+worstCodes = intersect(intersect(worstCodes_gb1$Id, worstCodes_pare2$Id), worstCodes_pare3$Id)
+length(worstCodes)
+res_gb1[res_gb1$Id==worstCodes[1],1:10]
+```
+
+# Comparison with Pines and Calles codes
+How many of the Ostrov codes reach higher fitness than the Calles and Pines codes?
+
+## GB1
+```{r}
+res_pines_calles = read.delim("../../GB1/03_greedy_walks/pines_calles_codes/output/results", header=FALSE)
+for (i in 1:8) {
+  print(res_pines_calles[i,1])
+  print(sum(res_gb1$MeanFitness>=res_pines_calles[i,2])/194481)
+}
+```
+
+## ParE2
+```{r}
+res_pines_calles = read.delim("../../ParE2/03_greedy_walks/pines_calles_codes/output/results", header=FALSE)
+for (i in 1:8) {
+  print(res_pines_calles[i,1])
+  print(sum(res_pare2$MeanFitness>=res_pines_calles[i,2])/194481)
+}
+```
+
+
+## ParE3
+```{r}
+res_pines_calles = read.delim("../../ParE3/03_greedy_walks/pines_calles_codes/output/results", header=FALSE)
+for (i in 1:8) {
+  print(res_pines_calles[i,1])
+  print(sum(res_pare3$MeanFitness>=res_pines_calles[i,2])/194481)
+}
+```

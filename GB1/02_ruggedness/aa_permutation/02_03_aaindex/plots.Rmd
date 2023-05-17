@@ -1,0 +1,290 @@
+---
+title: "GB1: Correlation of landscape properties with aaindex"
+author: "Hana Rozhonova"
+date: "6/21/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Read the data
+```{r}
+results = read.delim("output/results_aaindex", header=FALSE)
+colnames(results) = c("Property", paste0("Corr_", c("numPeaks", "magEpi", "ssEpi", "rsEpi", "paths")))
+bartonek_s01 = read.csv("input/Bartonek_PNAS_2020_S01.csv", header=TRUE)
+colnames(bartonek_s01)[1] = "Property"
+results = merge(results, bartonek_s01)
+res_random_corrs = read.delim("output/results_aaindex_null", header=FALSE, sep=",")
+colnames(res_random_corrs) = c("numPeaks", "magEpi", "ssEpi", "rsEpi", "paths")
+```
+
+# Peaks
+### Number of peaks
+P-value based on the randomly generated properties:
+```{r}
+results$P_numPeaks = sapply(results$Corr_numPeaks, function(x) (sum(abs(res_random_corrs[,1])>=abs(x))+1)/nrow(res_random_corrs))
+```
+
+Benjmaini-Hochberg correction for multiple testing:
+```{r}
+results$Padj_numPeaks = p.adjust(results$P_numPeaks, method="BH")
+tmp = results[results$Padj_numPeaks<=0.05,]
+nrow(tmp)
+```
+
+How many of the statistically significant properties are positively and negatively correlated?
+```{r}
+sum(tmp$Corr_numPeaks>=0)
+sum(tmp$Corr_numPeaks<=0)
+```
+
+
+Which properties are statistically significant?
+```{r}
+summary(as.factor(tmp$category))
+```
+
+Is any category overrepresented?
+```{r}
+### "hydro"
+# frequency in original data
+(p=sum(results$category=="hydro")/nrow(results))
+# frequency in the significant data
+sum(tmp$category == "hydro")/nrow(tmp)
+# binomial test
+binom.test(sum(tmp$category == "hydro"), nrow(tmp), p, "g")
+
+### alpha
+# frequency in original data
+(p = sum(results$category=="alpha")/nrow(results))
+# frequency in the significant data
+sum(tmp$category == "alpha")/nrow(tmp)
+# binomial test
+binom.test(sum(tmp$category == "alpha"), nrow(tmp), p, "g")
+
+### beta
+# frequency in original data
+(p=sum(results$category=="beta")/nrow(results))
+# frequency in the significant data
+sum(tmp$category == "beta")/nrow(tmp)
+# binomial test
+binom.test(sum(tmp$category == "beta"), nrow(tmp), p, "g")
+
+### other
+# frequency in original data
+(p=sum(results$category=="other")/nrow(results))
+# frequency in the significant data
+sum(tmp$category == "other")/nrow(tmp)
+# binomial test
+binom.test(sum(tmp$category == "other"), nrow(tmp), p, "g")
+```
+
+
+
+# Epistasis
+### Magnitude epistasis
+P-value based on the randomly generated properties:
+```{r}
+results$P_magEpi = sapply(results$Corr_magEpi, function(x) (sum(abs(res_random_corrs[,2])>=abs(x))+1)/nrow(res_random_corrs))
+```
+
+BH correction for multiple testing:
+```{r}
+results$Padj_magEpi = p.adjust(results$P_magEpi, method="BH")
+tmp = results[results$Padj_magEpi<=0.05,]
+nrow(tmp)
+```
+
+How many are positively and negatively correlated?
+```{r}
+sum(tmp$Corr_magEpi>=0)
+sum(tmp$Corr_magEpi<=0)
+```
+
+
+Which properties are statistically significant?
+```{r}
+summary(as.factor(tmp$category))
+```
+
+Is any category overrepresented?
+```{r}
+### "hydro"
+# frequency in original data
+(p=sum(results$category=="hydro")/nrow(results))
+# frequency in the significant data
+sum(tmp$category == "hydro")/nrow(tmp)
+# binomial test
+binom.test(sum(tmp$category == "hydro"), nrow(tmp), p, "g")
+
+### alpha
+# frequency in original data
+(p = sum(results$category=="alpha")/nrow(results))
+# frequency in the significant data
+sum(tmp$category == "alpha")/nrow(tmp)
+# binomial test
+binom.test(sum(tmp$category == "alpha"), nrow(tmp), p, "g")
+
+### beta
+# frequency in original data
+(p=sum(results$category=="beta")/nrow(results))
+# frequency in the significant data
+sum(tmp$category == "beta")/nrow(tmp)
+# binomial test
+binom.test(sum(tmp$category == "beta"), nrow(tmp), p, "g")
+
+### other
+# frequency in original data
+(p=sum(results$category=="other")/nrow(results))
+# frequency in the significant data
+sum(tmp$category == "other")/nrow(tmp)
+# binomial test
+binom.test(sum(tmp$category == "other"), nrow(tmp), p, "g")
+```
+
+
+### Simple-sign epistasis
+P-value based on the randomly generated properties:
+```{r}
+results$P_ssEpi = sapply(results$Corr_ssEpi, function(x) (sum(abs(res_random_corrs[,3])>=abs(x))+1)/nrow(res_random_corrs))
+```
+
+BH correction for multiple testing:
+```{r}
+results$Padj_ssEpi = p.adjust(results$P_ssEpi, method="BH")
+tmp = results[results$Padj_ssEpi<=0.05,]
+nrow(tmp)
+```
+
+
+### Reciprocal-sign epistasis
+P-value based on the randomly generated properties:
+```{r}
+results$P_rsEpi = sapply(results$Corr_rsEpi, function(x) (sum(abs(res_random_corrs[,4])>=abs(x))+1)/nrow(res_random_corrs))
+```
+
+BH correction for multiple testing:
+```{r}
+results$Padj_rsEpi = p.adjust(results$P_rsEpi, method="BH")
+tmp = results[results$Padj_rsEpi<=0.05,]
+nrow(tmp)
+```
+
+How many are positively and negatively correlated?
+```{r}
+sum(tmp$Corr_rsEpi>=0)
+sum(tmp$Corr_rsEpi<=0)
+```
+
+
+Which properties are statistically significant?
+```{r}
+summary(as.factor(tmp$category))
+```
+
+Is any category overrepresented?
+```{r}
+### "hydro"
+# frequency in original data
+(p=sum(results$category=="hydro")/nrow(results))
+# frequency in the significant data
+sum(tmp$category == "hydro")/nrow(tmp)
+# binomial test
+binom.test(sum(tmp$category == "hydro"), nrow(tmp), p, "g")
+
+### alpha
+# frequency in original data
+(p = sum(results$category=="alpha")/nrow(results))
+# frequency in the significant data
+sum(tmp$category == "alpha")/nrow(tmp)
+# binomial test
+binom.test(sum(tmp$category == "alpha"), nrow(tmp), p, "g")
+
+### beta
+# frequency in original data
+(p=sum(results$category=="beta")/nrow(results))
+# frequency in the significant data
+sum(tmp$category == "beta")/nrow(tmp)
+# binomial test
+binom.test(sum(tmp$category == "beta"), nrow(tmp), p, "g")
+
+### other
+# frequency in original data
+(p=sum(results$category=="other")/nrow(results))
+# frequency in the significant data
+sum(tmp$category == "other")/nrow(tmp)
+# binomial test
+binom.test(sum(tmp$category == "other"), nrow(tmp), p, "g")
+```
+
+
+# Accessibility of the global peak
+P-value based on the randomly generated properties:
+```{r}
+results$P_paths = sapply(results$Corr_paths, function(x) (sum(abs(res_random_corrs[,5])>=abs(x))+1)/nrow(res_random_corrs))
+```
+
+BH correction for multiple testing:
+```{r}
+results$Padj_paths = p.adjust(results$P_paths, method="BH")
+tmp = results[results$Padj_paths<=0.05,]
+nrow(tmp)
+```
+
+How many are positively and negatively correlated?
+```{r}
+sum(tmp$Corr_paths>=0)
+sum(tmp$Corr_paths<=0)
+```
+
+
+Which properties are statistically significant?
+```{r}
+summary(as.factor(tmp$category))
+```
+
+Is any category overrepresented?
+```{r}
+### "hydro"
+# frequency in original data
+(p=sum(results$category=="hydro")/nrow(results))
+# frequency in the significant data
+sum(tmp$category == "hydro")/nrow(tmp)
+# binomial test
+binom.test(sum(tmp$category == "hydro"), nrow(tmp), p, "g")
+
+### alpha
+# frequency in original data
+(p = sum(results$category=="alpha")/nrow(results))
+# frequency in the significant data
+sum(tmp$category == "alpha")/nrow(tmp)
+# binomial test
+binom.test(sum(tmp$category == "alpha"), nrow(tmp), p, "g")
+
+### beta
+# frequency in original data
+(p=sum(results$category=="beta")/nrow(results))
+# frequency in the significant data
+sum(tmp$category == "beta")/nrow(tmp)
+# binomial test
+binom.test(sum(tmp$category == "beta"), nrow(tmp), p, "g")
+
+### other
+# frequency in original data
+(p=sum(results$category=="other")/nrow(results))
+# frequency in the significant data
+sum(tmp$category == "other")/nrow(tmp)
+# binomial test
+binom.test(sum(tmp$category == "other"), nrow(tmp), p, "g")
+```
+
+
+
+# Save the data
+```{r}
+write.table(results[,c(1,2,22,23,3,24,25,4,26,27,5,28,29,6,30,31,7)], file="output/supp_data_S1.csv", quote=FALSE, sep=",", row.names=FALSE)
+```
+

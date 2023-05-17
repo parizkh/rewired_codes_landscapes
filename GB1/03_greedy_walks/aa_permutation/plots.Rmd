@@ -1,0 +1,217 @@
+---
+title: "GB1, greedy walks, aa permutation codes"
+author: "Hana Rozhonova"
+date: "6/10/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(stringr)
+library(ggplot2)
+library(gridExtra)
+library(ggpubr)
+library(dplyr)
+library(reticulate)
+```
+
+# Read the data
+```{r}
+if (file.exists("output/results_processed.tsv")) {
+  results = read.delim("output/results_processed.tsv", header=TRUE)
+} else {
+  results = read.delim("output/results", header=FALSE, stringsAsFactors = FALSE)
+  colnames(results) = c("Seed","SplitAa", "Robustness", "MeanFitness", "MeanSteps", "Peaks")
+  
+  # entropy of the reached peaks
+  entropy_peaks = c()
+  for (i in 1:nrow(results)) {
+    peaks_counts = str_split(results$Peaks[i], ",")[[1]]
+    peaks_counts = head(peaks_counts, -1)
+    peaks_counts = as.numeric(lapply(str_split(peaks_counts, ":"), function(x) x[2]))
+    # compute Shannon entropy
+    peaks_probs = peaks_counts/sum(peaks_counts)
+    entropy = -1*sum(peaks_probs*log(peaks_probs))
+    entropy_peaks = c(entropy_peaks, entropy)
+  }
+  results$Entropy_peaks = entropy_peaks
+  
+  # probability of reaching the global peak
+  prop = function(peaks, opt) {
+    peaks_split = strsplit(peaks, ",")[[1]]
+    peak_opt = peaks_split[startsWith(peaks_split, opt)]
+    peak_opt_count = sum(as.numeric(unlist(strsplit(peak_opt, ":"))[seq(2, 2*length(peak_opt), 2)]))
+    count_total = 0
+    for (peak in peaks_split) {
+      count_total = count_total + as.numeric(strsplit(peak, ":")[[1]][2])
+    }
+    return(peak_opt_count/count_total)
+  }
+  # global max
+  data = read.delim("input/map.tsv", header=TRUE)
+  global_max = as.character(data$sequence[which.max(data$phenotype)])
+  results$Prob_reaching_global_peak = sapply(results$Peaks, prop, global_max)
+  write.table(results, file="output/results_processed.tsv", quote=FALSE, sep="\t", row.names=FALSE)
+}
+```
+
+# Histograms: Mean fitness, mean number of steps, entropy of the reached peaks, and probability of reaching the global peak(s)
+```{r}
+fit_standard = results$MeanFitness[results$Seed==0]
+p = sum(results$MeanFitness>=fit_standard)/nrow(results)
+hist_fit = ggplot(results, aes(x=MeanFitness)) + 
+  geom_histogram(alpha=0.2, color="black") +
+  theme_test() +
+  geom_vline(xintercept=fit_standard, linetype="dashed", color="red") +
+  labs(x="Mean fitness", y="Count", title=paste0("p=", signif(p, digits=3)))
+
+steps_standard = results$MeanSteps[results$Seed==0]
+p = sum(results$MeanSteps>=steps_standard)/nrow(results)
+hist_steps = ggplot(results, aes(x=MeanSteps)) + 
+  geom_histogram(alpha=0.2, color="black") +
+  theme_test() +
+  geom_vline(xintercept=steps_standard, linetype="dashed", color="red") +
+  labs(x="Mean number of steps", y="Count", title=paste0("p=", signif(p, digits=3)))
+
+ent_standard = results$Entropy_peaks[results$Seed==0]
+p = sum(results$Entropy_peaks<=ent_standard)/nrow(results)
+hist_ent = ggplot(results, aes(x=Entropy_peaks)) + 
+  geom_histogram(alpha=0.2, color="black") +
+  theme_test() +
+  geom_vline(xintercept=ent_standard, linetype="dashed", color="red") +
+  labs(x="Entropy of the distribution of reached peaks", y="Count", title=paste0("p=", signif(p, digits=3)))
+
+prob_standard = results$Prob_reaching_global_peak[results$Seed==0]
+p = sum(results$Prob_reaching_global_peak>=prob_standard)/nrow(results)
+hist_prob = ggplot(results, aes(x=Prob_reaching_global_peak)) + 
+  geom_histogram(alpha=0.2, color="black") +
+  theme_test() +
+  geom_vline(xintercept=prob_standard, linetype="dashed", color="red") +
+  labs(x="Probability of reaching the global peak(s)", y="Count", title=paste0("p=", signif(p, digits=3)))
+
+grid.arrange(hist_fit, hist_steps, hist_ent, hist_prob, ncol=2)
+```
+
+
+# Correlations with code robustness
+```{r}
+rob_standard = results$Robustness[results$Seed==0]
+
+(corTest = cor.test(results$MeanFitness, results$Robustness))
+p_fit = ggplot(results, aes(x=Robustness, y=MeanFitness)) +
+  geom_bin2d(bins=59, alpha=0.8) +
+  scale_fill_continuous(type = "viridis", name="Count") +
+  theme_test() +
+  theme(legend.position="bottom") +
+  geom_point(x=rob_standard, y=fit_standard, fill="gray", pch=21, size=2) + 
+  labs(x="Code robustness", y="Mean fitness reached\nby greedy adaptive walks") +
+  geom_smooth(color="black") +
+  geom_text(label=paste0("R = ", signif(corTest$estimate, digits=3)), x=0.43, y=min(results$MeanFitness)+0.03*(max(results$MeanFitness)-min(results$MeanFitness)), size=4) +
+  annotate(geom = "label", x=rob_standard, y=fit_standard+0.07*(max(results$MeanFitness)-min(results$MeanFitness)), label="SGC", alpha=0.8, size=3)
+
+(corTest = cor.test(results$MeanSteps, results$Robustness))
+p_steps =  ggplot(results, aes(x=Robustness, y=MeanSteps)) +
+  geom_bin2d(bins=59, alpha=0.8) +
+  scale_fill_continuous(type = "viridis", name="Count") +
+  theme_test() +
+  theme(legend.position="bottom") +
+  geom_point(x=rob_standard, y=steps_standard, fill="gray", pch=21, size=2) + 
+  labs(x="Code robustness", y="Mean number of steps\nof greedy adaptive walks") +
+  geom_smooth(color="black") +
+  geom_text(label=paste0("R = ", signif(corTest$estimate, digits=3)), x=0.43, y=min(results$MeanSteps)+0.03*(max(results$MeanSteps)-min(results$MeanSteps)), size=4) +
+  annotate(geom = "label", x=rob_standard, y=steps_standard+0.07*(max(results$MeanSteps)-min(results$MeanSteps)), label="SGC", alpha=0.8, size=3)
+
+
+(corTest = cor.test(results$Entropy_peaks, results$Robustness))
+p_ent = ggplot(results, aes(x=Robustness, y=Entropy_peaks)) +
+  geom_bin2d(bins=59, alpha=0.8) +
+  scale_fill_continuous(type = "viridis", name="Count") +
+  theme_test() +
+  theme(legend.position="bottom") +
+  geom_point(x=rob_standard, y=ent_standard, fill="gray", pch=21, size=2) + 
+  labs(x="Code robustness", y="Entropy of the distribution\nof reached peaks") +
+  geom_smooth(color="black") +
+  geom_text(label=paste0("R = ", signif(corTest$estimate, digits=3)), x=0.43, y=min(results$Entropy_peaks)+0.03*(max(results$Entropy_peaks)-min(results$Entropy_peaks)), size=4) +
+  annotate(geom = "label", x=rob_standard, y=ent_standard+0.07*(max(results$Entropy_peaks)-min(results$Entropy_peaks)), label="SGC", alpha=0.8, size=3)
+
+(corTest = cor.test(results$Prob_reaching_global_peak, results$Robustness))
+p_prob = ggplot(results, aes(x=Robustness, y=Prob_reaching_global_peak)) +
+  geom_bin2d(bins=59) +
+  scale_fill_continuous(type = "viridis") +
+  theme_test() +
+  geom_point(x=rob_standard, y=prob_standard, color="red") + 
+  labs(x="Code robustness", y="Probability of reaching the global peak", title=paste0("R=", signif(corTest$estimate, digits=3)))
+
+grid.arrange(p_fit, p_steps, p_ent, p_prob, nrow=2)
+```
+
+Restrict only to codes that have the same size of the global peak as the SGC and the global peak is not split:
+```{r}
+res_summitSizes = read.delim("../..//02_ruggedness/aa_permutation/02_01_global_peak_size/results_globalPeakSize_aaPerm", header=FALSE)
+colnames(res_summitSizes) = c("Seed", "SummitSize")
+results = merge(results, res_summitSizes)
+
+cor.test(results$MeanFitness, results$SummitSize)
+
+tmp = results[results$SummitSize == results$SummitSize[results$Seed==0] & ! results$SplitAa %in% c("W", "L", "A"),]
+
+
+(corTest = cor.test(tmp$MeanFitness, tmp$Robustness))
+(corTest = cor.test(tmp$MeanSteps, tmp$Robustness))
+(corTest = cor.test(tmp$Entropy_peaks, tmp$Robustness))
+(corTest = cor.test(tmp$Prob_reaching_global_peak, tmp$Robustness))
+```
+
+
+What drives the correlation between code robustness and mean fitness? 
+
+(1) Discarding the global peak -- is the correlation still present?
+```{r}
+data_gb1=read.delim("../../01_vcregression/output/map.txt", header=TRUE, sep=",")
+max_fitness = max(data_gb1$phenotype)
+tmp$MeanFitness_woSummit = 1/(1-tmp$Prob_reaching_global_peak)*(tmp$MeanFitness - tmp$Prob_reaching_global_peak*max_fitness)
+cor.test(tmp$Robustness, tmp$MeanFitness_woSummit)
+```
+
+The correlation is not driven by the summit.
+
+(2) Is it because the local peaks in the robust landscapes are higher than the local peaks in less robust landscapes? 
+```{r}
+res_ruggedness= read.delim("../../02_ruggedness/aa_permutation/output/results/results", header=FALSE)
+colnames(res_ruggedness) = c("Seed", "SplitAa", "Robustness", "NumPeaks", "MeanPeakHeight", "NoEpi", "MagEpi", "SsEpi", "RsEpi", "Accessibility")
+tmp = merge(tmp, res_ruggedness[,c("Seed", "MeanPeakHeight")])
+cor.test(tmp$Robustness, tmp$MeanPeakHeight)
+```
+
+(3) So it must be that under the robust codes the basin of attraction of higher peaks is relatively larger than for less robust codes.
+```{r}
+write.table(tmp, "output/results_constSummitSize.tsv", quote=FALSE, sep="\t", row.names=FALSE)
+py_run_file("data_basins.py")
+res_basins = read.delim("output/basins.tsv", header=FALSE)
+colnames(res_basins) = c("Seed", "Robustness", "sequence", "Basin")
+res_basins = merge(res_basins, data_gb1)
+
+coefs = c()
+robs = c()
+for (seed in unique(res_basins$Seed)) {
+  tmp_basins = res_basins[res_basins$Seed==seed,]
+  lm = lm(log(Basin)~phenotype, data=tmp_basins)
+  coef = lm$coefficients[2]
+  coefs = c(coefs, coef)
+  robs = c(robs, tmp$Robustness[tmp$Seed==seed])
+}
+cor.test(robs, coefs)
+```
+
+
+
+# The final plot
+```{r}
+ggarrange(p_fit, p_ent, p_steps,
+          labels = c("A", "B", "C"),
+          ncol=3)
+```
+
