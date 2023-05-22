@@ -78,4 +78,53 @@ done
 
 This way, we generate files with the coordinates for 10 Diffusion axis for each possible 12 nucleotide sequence and a single file encoding which genotypes are connected to plot the edges between them
 
+### Plot complete landscapes
+
+At this scale, rendering images with millions of nodes and edges also becomes quite computationally expensive. Thus, we are using [datashader](https://datashader.org/) in our library to make it more manageable. The orientation of the axis may need to be readjusted to obtain the exact same views by just flipping the sign of some of the Diffusion axis. 
+
+```
+edges="output/edges.npz"
+cmd="plot_visualization -H 5 -W 5 -nr 1000 -er 2000 --datashader -e $edges -nc function"
+
+# Standard code
+code="Standard"
+$cmd output/$code.nodes.pq -o ../plots/$code.2.1 -a 2,1
+$cmd output/$code.nodes.pq -o ../plots/$code.3.1 -a 3,1
+
+# Robust code A
+code="9002"
+$cmd output/$code.nodes.pq -o ../plots/$code.1.2 -a 1,2
+$cmd output/$code.nodes.pq -o ../plots/$code.3.2 -a 3,2
+
+# Robust code B
+code="73213"
+$cmd output/$code.nodes.pq -o ../plots/$code.1.2 -a 1,2
+$cmd output/$code.nodes.pq -o ../plots/$code.2.3 -a 2,3
+
+# Non robust code A
+code="5521"
+$cmd output/$code.nodes.pq -o ../plots/$code.1.2 -a 1,2
+
+# Non robust code B
+code="6037"
+$cmd output/$code.nodes.pq -o ../plots/$code.1.2 -a 1,2
+$cmd output/$code.nodes.pq -o ../plots/$code.3.2 -a 3,2
+```
+
+### Selecting top 1% genotypes and plotting
+
+```
+cmd="filter_genotypes -e output/edges.npz -n 167730 -l function -nf pq -ef npz"
+
+codes=`cut -f 1 -d ','  genetic_codes.csv | grep -v code`
+for code in $codes
+do
+        $cmd output/$code.nodes.pq -o output/$code.filtered
+	python plot_filt_landscape.py $code
+done
+```
+
+Annotations were added manually afterwards to highlight the main sequence features of the different clusters of interest
+
+
 
