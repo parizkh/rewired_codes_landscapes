@@ -61,19 +61,7 @@ We precalculate these coordinates because with such a big landscape containing o
 #Create link to inferred landscape
 ln -s ../01_vcregression/output/map.txt protein_landscape.csv
 
-# Calculate coordinates for standard genetic code
-cmd="calc_visualization protein_landscape.csv -k 10 -Ns 1 -C -ef npz -nf pq"
-$cmd -o output/standard -e
-
-# Rename edges file to use it for all visualizations
-mv output/Standard.edges.npz output/edges.npz
-
-# Calculate coordinates for other codes
-codes=`cut -f 1 -d ','  genetic_codes.csv | grep -v code | grep -v Standard`
-for code in $codes
-do
-	$cmd -c genetic_codes/code_$code.csv -o output/$code
-done
+bash 1_calculate_visualization.sh
 ```
 
 This way, we generate files with the coordinates for 10 Diffusion axis for each possible 12 nucleotide sequence and a single file encoding which genotypes are connected to plot the edges between them
@@ -83,48 +71,25 @@ This way, we generate files with the coordinates for 10 Diffusion axis for each 
 At this scale, rendering images with millions of nodes and edges also becomes quite computationally expensive. Thus, we are using [datashader](https://datashader.org/) in our library to make it more manageable. The orientation of the axis may need to be readjusted to obtain the exact same views by just flipping the sign of some of the Diffusion axis. 
 
 ```
-edges="output/edges.npz"
-cmd="plot_visualization -H 5 -W 5 -nr 1000 -er 2000 --datashader -e $edges -nc function"
-
-# Standard code
-code="Standard"
-$cmd output/$code.nodes.pq -o ../plots/$code.2.1 -a 2,1
-$cmd output/$code.nodes.pq -o ../plots/$code.3.1 -a 3,1
-
-# Robust code A
-code="9002"
-$cmd output/$code.nodes.pq -o ../plots/$code.1.2 -a 1,2
-$cmd output/$code.nodes.pq -o ../plots/$code.3.2 -a 3,2
-
-# Robust code B
-code="73213"
-$cmd output/$code.nodes.pq -o ../plots/$code.1.2 -a 1,2
-$cmd output/$code.nodes.pq -o ../plots/$code.2.3 -a 2,3
-
-# Non robust code A
-code="5521"
-$cmd output/$code.nodes.pq -o ../plots/$code.1.2 -a 1,2
-
-# Non robust code B
-code="6037"
-$cmd output/$code.nodes.pq -o ../plots/$code.1.2 -a 1,2
-$cmd output/$code.nodes.pq -o ../plots/$code.3.2 -a 3,2
+bash 2_plot_visualization.sh
 ```
 
 ### Selecting top 1% genotypes and plotting
 
-```
-cmd="filter_genotypes -e output/edges.npz -n 167730 -l function -nf pq -ef npz"
+To do the selection simply run
 
-codes=`cut -f 1 -d ','  genetic_codes.csv | grep -v code`
-for code in $codes
-do
-        $cmd output/$code.nodes.pq -o output/$code.filtered
-	python plot_filt_landscape.py $code
-done
+```
+bash 3_select_top_genotypes.sh
 ```
 
-Annotations were added manually afterwards to highlight the main sequence features of the different clusters of interest
+After it is done, we can do the specific plots using the small provided script
+
+```
+bash 4_plot_top_genotypes.sh
+
+```
+
+Annotations in the final figure were added manually afterwards to highlight the main sequence features of the different clusters of interest
 
 
 
