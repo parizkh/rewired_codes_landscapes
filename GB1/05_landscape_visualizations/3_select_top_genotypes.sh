@@ -1,11 +1,9 @@
-cmd="conda activate gpmap; python filter_landscape.py"
 qsub="qsub -cwd -l mem_free=8G"
+cmd="conda activate gpmap ; filter_genotypes -e output/edges.npz -n 167730 -l function -nf pq -ef npz"
 
-
-python select_reduced_protein_sequences.py
-
-codes=`cut -f 1 -d ','  ../genetic_codes/genetic_codes.csv | grep -v code`
+codes=`cut -f 1 -d ','  genetic_codes.csv | grep -v code`
 for code in $codes
 do
-	echo "$cmd $code"  | $qsub -N filt.$code
+        echo "$cmd output/$code.nodes.pq -o output/$code.filtered" | qsub -N $code.f
 done
+
