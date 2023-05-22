@@ -30,28 +30,28 @@ The file `genetic_codes.csv` contains the information about the genetic codes th
 The following codon table represents robust code A representing one of the most robust codes in the set of randomly generated codes, whe
 re we can easily appreciate the new connectivity between the different aminoacids compared to the standard genetic code
 
-|   |  T      |  C      |  A      |  G      |
-|---|---------|---------|---------|---------|--
-| T | TTT G   | TCT T   | TAT R   | TGT P   | T
-| T | TTC G   | TCC T   | TAC R   | TGC P   | C
-| T | TTA Y   | TCA T   | TAA Stop| TGA Stop| A
-| T | TTG Y   | TCG T   | TAG Stop| TGG E   | G
-|---|---------|---------|---------|---------|--
-| C | CTT Y   | CCT Q   | CAT H   | CGT M   | T
-| C | CTC Y   | CCC Q   | CAC H   | CGC M   | C
-| C | CTA Y   | CCA Q   | CAA K   | CGA M   | A
-| C | CTG Y   | CCG Q   | CAG K   | CGG M   | G
-|---|---------|---------|---------|---------|--
-| A | ATT I   | ACT C   | AAT D   | AGT T   | T
-| A | ATC I   | ACC C   | AAC D   | AGC T   | C
-| A | ATA I   | ACA C   | AAA V   | AGA M   | A
-| A | ATG F   | ACG C   | AAG V   | AGG M   | G
-|---|---------|---------|---------|---------|--
-| G | GTT W   | GCT S   | GAT N   | GGT L   | T
-| G | GTC W   | GCC S   | GAC N   | GGC L   | C
-| G | GTA W   | GCA S   | GAA A   | GGA L   | A
-| G | GTG W   | GCG S   | GAG A   | GGG L   | G
-|---|---------|---------|---------|---------|--
+|   |  T      |  C      |  A      |  G      |   |
+|---|---------|---------|---------|---------|---|
+| T | TTT G   | TCT T   | TAT R   | TGT P   | T |
+| T | TTC G   | TCC T   | TAC R   | TGC P   | C |
+| T | TTA Y   | TCA T   | TAA Stop| TGA Stop| A |
+| T | TTG Y   | TCG T   | TAG Stop| TGG E   | G |
+|---|---------|---------|---------|---------|---|
+| C | CTT Y   | CCT Q   | CAT H   | CGT M   | T |
+| C | CTC Y   | CCC Q   | CAC H   | CGC M   | C |
+| C | CTA Y   | CCA Q   | CAA K   | CGA M   | A |
+| C | CTG Y   | CCG Q   | CAG K   | CGG M   | G |
+|---|---------|---------|---------|---------|---|
+| A | ATT I   | ACT C   | AAT D   | AGT T   | T |
+| A | ATC I   | ACC C   | AAC D   | AGC T   | C |
+| A | ATA I   | ACA C   | AAA V   | AGA M   | A |
+| A | ATG F   | ACG C   | AAG V   | AGG M   | G |
+|---|---------|---------|---------|---------|---|
+| G | GTT W   | GCT S   | GAT N   | GGT L   | T |
+| G | GTC W   | GCC S   | GAC N   | GGC L   | C |
+| G | GTA W   | GCA S   | GAA A   | GGA L   | A |
+| G | GTG W   | GCG S   | GAG A   | GGG L   | G |
+|---|---------|---------|---------|---------|---|
 
 ### Calculating coordinates of the visualization under rewired codes
 
