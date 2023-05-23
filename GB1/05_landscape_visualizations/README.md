@@ -71,6 +71,7 @@ This way, we generate files with the coordinates for 10 Diffusion axis for each 
 At this scale, rendering images with millions of nodes and edges also becomes quite computationally expensive. Thus, we are using [datashader](https://datashader.org/) in our library to make it more manageable. The orientation of the axis may need to be readjusted to obtain the exact same views by just flipping the sign of some of the Diffusion axis. 
 
 ```
+python flip_axis.py
 bash 2_plot_visualization.sh
 ```
 
