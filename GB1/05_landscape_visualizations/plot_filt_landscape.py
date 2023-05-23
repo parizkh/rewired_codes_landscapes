@@ -108,11 +108,15 @@ if __name__ == '__main__':
                 'GA', 'GC', 'GV', 'GL', 'GM', 'GF', 'GT', 'GG', 'GV']
     seqs = get_path_seqs()
 
-    code, x, y, z = 'Standard', '2', '1', '3'
-    #code = sys.argv[1]
+    #code, x, y, z = 'Standard', '2', '1', '3'
+    code, x, y, z = sys.argv[1:]
     
     print('Reading filtered landscape under code {}'.format(code))
     ndf, edf, pathdf = read_landscape(code, seqs)
     make_plot(ndf, edf, pathdf, x, y, z, code, suffixes, size=5, padding=0.1)
-
+    
+    print('Plotting interactive plot')
+    plot.plot_interactive(ndf, z='3', nodes_size=4,
+                          fpath='plots/{}_interactive'.format(code),
+                          text=ndf['protein'])
 
