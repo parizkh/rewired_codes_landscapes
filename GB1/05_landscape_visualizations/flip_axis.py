@@ -2,11 +2,12 @@ import pandas as pd
 
 
 if __name__ == '__main__':
-    axis_flip = {'Standard': [2],
+    axis_flip = {
+                 'Standard': [2, 3],
                  '73213': [2],
-                 '9002': [1],
+                 '9002': [1, 2],
                  '5521': [1, 2],
-                 #'6037': []
+                 '6037': [3]
                  }
 
     for code, axis in axis_flip.items():
