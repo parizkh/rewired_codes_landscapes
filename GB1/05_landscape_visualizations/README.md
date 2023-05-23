@@ -2,14 +2,14 @@
 
 ### Dependencies
 
-Visualizations and plots were generated using [gpmap-tools](https://gpmap-tools.readthedocs.io) using commit XXX.
+Visualizations and plots were generated using [gpmap-tools](https://gpmap-tools.readthedocs.io) using commit 16260aaf7a51a0b569d2e164d82cdcc6a263ecd7.
 Set up a new python environment with conda and install the library. Use the same exact commit to ensure reproducibility
 
 ```
 conda create -n gpmap python=3.7
 conda activate gpmap
 git clone https://github.com/cmarti/gpmap-tools
-git checkouot XXX
+git checkout 16260aaf7a51a0b569d2e164d82cdcc6a263ecd7
 cd gpmap-tools
 python setup.py install
 ```
