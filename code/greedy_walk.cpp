@@ -1,5 +1,5 @@
 /*
-Performs the greedy walk simulation on the GB1 landscape, under a given genetic code.
+Performs the greedy walk simulation on a ParD3 landscape, under a given genetic code.
 Parameters:
 	[1] Name of the file containing the genotype-phenotype map. Format of the file: First line header, each other line contains one sequence and its phenotype, tab-delimited.
 	[2] Name of the file containing the genetic code. Format of the file: First line header, each other line tab-delimited aa (one-letter code) and a corresponding codon.
@@ -50,10 +50,10 @@ public:
 	}
 };
 
-// Converts an integer to a DNA sequence of length 12.
-string int_to_string(int u){
+// Converts an integer to a DNA sequence.
+string int_to_string(int u, int L){
 	string ret = "";
-	for(int i = 0; i < 12; ++i){
+	for(int i = 0; i < L*3; ++i){
 		switch(u % 4){
 			case 0: ret += "A"; break;
 			case 1: ret += "C"; break;
@@ -84,12 +84,22 @@ void read_code(string file_name, unordered_map<string, char>& code){
 	ifile.close();
 }
 
+// translates a nucleotide sequence to protein, using the given genetic code
+string translate(string nuc_seq, unordered_map<string, char>& code){
+	string res = "";
+	for (int i = 0; i<nuc_seq.size()/3; ++i) {
+		string codon = nuc_seq.substr(3*i,3);
+		res += string(1, code[codon]);
+	}
+	return res;
+}
+
 //read the phenotypic scores of the sequences
-void read_scores(string file_name, vector<double>& scores, unordered_map<string, char>& code){
+void read_scores(string file_name, vector<double>& scores, unordered_map<string, char>& code, int L){
 	cerr << "reading scores" << endl;	
 	// here we will store the scores of each nucleotide sequence
 	scores.clear();
-	scores.resize(1 << 24, EMPTY_VAL); // -100 for empty entries because of the stop codon
+	scores.resize(1 << (6*L), EMPTY_VAL); // -100 for empty entries because of the stop codon
 
 	// read the input data - scores for the protein sequences
 	ifstream data_file;
@@ -108,33 +118,28 @@ void read_scores(string file_name, vector<double>& scores, unordered_map<string,
 	}
 
 	cerr << "scores loaded, converting" << endl;
-	// for each nucleotide sequence of length 12, find its translation and store the corresponding score
-	for(int i = 0; i < (1 << 24); ++i){
-		string str = int_to_string(i);
-		string s0 = str.substr(0,3);
-		string s1 = str.substr(3,3);
-		string s2 = str.substr(6,3);
-		string s3 = str.substr(9,3);
+	// for each nucleotide sequence, find its translation and store the corresponding score
+	for(int i = 0; i < (1 << (6*L)); ++i){
+		string str = int_to_string(i, L);
+		string aa_str = translate(str, code);
+		if (aa_str.find('*') == string::npos) {
+			scores[i] = aa_scores[aa_str];
+		}
 
-		if(string(1,code[s0]) != "*" &&  string(1,code[s1]) != "*" && string(1,code[s2]) != "*" && string(1,code[s3]) != "*"){
-			scores[i] = aa_scores[
-				string(1, code[s0]) + string(1, code[s1]) + string(1, code[s2]) + string(1, code[s3])
-				];
-		} 
 	}
 
 	cerr << "num of nodes: " << aa_scores.size() << " " << scores.size() << endl;
 }
 
 // build the genotype network
-void build_graph(vector<Node >& G, unordered_map<string, char>& code, unordered_map<string, int>& node_names, vector<double>& scores){
+void build_graph(vector<Node >& G, unordered_map<string, char>& code, unordered_map<string, int>& node_names, vector<double>& scores, int L){
 	cerr << "building the graph" << endl;	
 	G.clear();
-	G.resize((1 << 24), Node());
+	G.resize((1 << (6*L)), Node());
 
 	for(int i = 0; i < G.size(); ++i){
 		// generate all possible neighbors
-		for(int j = 0; j < 12; ++j){
+		for(int j = 0; j < (3*L); ++j){
 			char cur_val = (i >> (2 * j)) % 4;
 			int base = i - (cur_val << (2*j));
 
@@ -147,25 +152,15 @@ void build_graph(vector<Node >& G, unordered_map<string, char>& code, unordered_
 	}
 }
 
-// translates a nucleotide sequence to protein, using the given genetic code
-string translate(string nuc_seq, unordered_map<string, char>& code){
-	string res = "";
-	for (int i = 0; i<nuc_seq.size()/3; ++i) {
-		string codon = nuc_seq.substr(3*i,3);
-		res += string(1, code[codon]);
-	}
-	return res;
-}
-
 
 // find the greedy paths
-void find_paths(vector<Node>& G, vector<double>& scores){
+void find_paths(vector<Node>& G, vector<double>& scores, int L){
 	cerr << "finding paths" << endl;
 	priority_queue<Event, vector<Event>, Compare> q;
-	vector<double> parent_score(1<<24, -1);
+	vector<double> parent_score(1<<(6*L), -1);
 
 	// initialize the queue: add all nodes; the queue is sorted based on the scores
-	for(int i = 0; i < (1 << 24); ++i){
+	for(int i = 0; i < (1 << (6*L)); ++i){
 		if(scores[i] == EMPTY_VAL) continue;
 		Event e = Event();
 		e.path = {scores[i]};
@@ -176,7 +171,7 @@ void find_paths(vector<Node>& G, vector<double>& scores){
 		parent_score[i] = scores[i];
 	}
 
-	vector<bool> relaxed(1<<24, false);
+	vector<bool> relaxed(1<<(6*L), false);
 
 	while(!q.empty()){
 		// the path in the queue beginning with the highest score
@@ -240,6 +235,7 @@ int main(int argc, char** argv){
 	string data_file_str = string(argv[1]);
 	string code_file_str = string(argv[2]);
 	string output_file_str = string(argv[3]);
+	int L = atoi(argv[4]);
 	
 	//read the genetic code
 	unordered_map<string, char> code; //GCA -> A
@@ -248,17 +244,17 @@ int main(int argc, char** argv){
 	
 	// genotype-phenotype map
 	vector<double> scores;
-	read_scores(data_file_str, scores, code);
+	read_scores(data_file_str, scores, code, L);
 	
 
 	// the genotype network
 	vector<Node> G;
 	unordered_map<string, int> node_names;
-	build_graph(G, code, node_names, scores);
+	build_graph(G, code, node_names, scores, L);
 
 
 	// the main computation
-	find_paths(G, scores);
+	find_paths(G, scores, L);
 
 	// compute mean fitness reached and report which peaks are reached
 	cout << "Computing mean number of steps, mean fitness and counting peaks." << endl;
@@ -266,21 +262,26 @@ int main(int argc, char** argv){
 	double sum_len = 0;
 	int num_vert = 0;
 	map<string,double> reached_peaks;
-	for (int i = 0; i < 1<<24; ++i) {
+	for (int i = 0; i < 1<<(6*L); ++i) {
 		if(scores[i] == EMPTY_VAL) continue;
 		sum += G[i].path[G[i].path.size()-1];
 		sum_len += G[i].path.size()-1;
 		num_vert += 1;
 
 		for (int j = 0; j<G[i].peaks.size(); ++j) {
-			string translation = translate(int_to_string(G[i].peaks[j]), code);
+			string translation = translate(int_to_string(G[i].peaks[j], L), code);
 			if (reached_peaks.count(translation)) reached_peaks[translation] += 1.0/G[i].peaks.size();
 			else reached_peaks[translation] = 1.0/G[i].peaks.size();
 		}
 
 		assert(G[i].path[G[i].path.size()-1] == scores[G[i].peaks[0]]);
+	}
 
-
+	// compute the entropy of distribution of reached peaks
+	double ent = 0;
+	for (auto it = reached_peaks.begin(); it!=reached_peaks.end(); ++it) {
+		double prob = it->second/num_vert;
+		ent -= prob*log(prob);
 	}
 	
 	// output
@@ -290,6 +291,7 @@ int main(int argc, char** argv){
 	for (auto it = reached_peaks.begin(); it!= reached_peaks.end(); ++it) {
 		out_file << std::fixed << setprecision(2) <<  it->first << ":" << it->second << ",";
 	}
+	out_file << "\t" << ent;
 	out_file << endl;
 
 

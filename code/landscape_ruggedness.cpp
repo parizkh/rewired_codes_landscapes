@@ -36,9 +36,9 @@ struct Node{
 
 
 // Converts an integer to a DNA sequence of length 12.
-string int_to_string(int u){
+string int_to_string(int u, int L){
 	string ret = "";
-	for(int i = 0; i < 12; ++i){
+	for(int i = 0; i < L*3; ++i){
 		switch(u % 4){
 			case 0: ret += "A"; break;
 			case 1: ret += "C"; break;
@@ -69,12 +69,22 @@ void read_code(string file_name, unordered_map<string, char>& code){
 	ifile.close();
 }
 
+// translates a nucleotide sequence to protein, using the given genetic code
+string translate(string nuc_seq, unordered_map<string, char>& code){
+	string res = "";
+	for (int i = 0; i<nuc_seq.size()/3; ++i) {
+		string codon = nuc_seq.substr(3*i,3);
+		res += string(1, code[codon]);
+	}
+	return res;
+}
+
 //read the phenotypic scores of the sequences
-void read_scores(string file_name, vector<double>& scores, unordered_map<string, char>& code){
+void read_scores(string file_name, vector<double>& scores, unordered_map<string, char>& code, int L){
 	cerr << "reading scores" << endl;	
 	// here we will store the scores of each nucleotide sequence
 	scores.clear();
-	scores.resize(1 << 24, EMPTY_VAL); // -100 for empty entries because of the stop codon
+	scores.resize(1 << (6*L), EMPTY_VAL); // -100 for empty entries because of the stop codon
 
 	// read the input data - scores for the protein sequences
 	ifstream data_file;
@@ -93,33 +103,28 @@ void read_scores(string file_name, vector<double>& scores, unordered_map<string,
 	}
 
 	cerr << "scores loaded, converting" << endl;
-	// for each nucleotide sequence of length 12, find its translation and store the corresponding score
-	for(int i = 0; i < (1 << 24); ++i){
-		string str = int_to_string(i);
-		string s0 = str.substr(0,3);
-		string s1 = str.substr(3,3);
-		string s2 = str.substr(6,3);
-		string s3 = str.substr(9,3);
+	// for each nucleotide sequence, find its translation and store the corresponding score
+	for(int i = 0; i < (1 << (6*L)); ++i){
+		string str = int_to_string(i, L);
+		string aa_str = translate(str, code);
+		if (aa_str.find('*') == string::npos) {
+			scores[i] = aa_scores[aa_str];
+		}
 
-		if(string(1,code[s0]) != "*" &&  string(1,code[s1]) != "*" && string(1,code[s2]) != "*" && string(1,code[s3]) != "*"){
-			scores[i] = aa_scores[
-				string(1, code[s0]) + string(1, code[s1]) + string(1, code[s2]) + string(1, code[s3])
-				];
-		} 
 	}
 
 	cerr << "num of nodes: " << aa_scores.size() << " " << scores.size() << endl;
 }
 
 // build the genotype network
-void build_graph(vector<Node >& G, unordered_map<string, char>& code, unordered_map<string, int>& node_names, vector<double>& scores){
+void build_graph(vector<Node >& G, unordered_map<string, char>& code, unordered_map<string, int>& node_names, vector<double>& scores, int L){
 	cerr << "building the graph" << endl;	
 	G.clear();
-	G.resize((1 << 24), Node());
+	G.resize((1 << (6*L)), Node());
 
 	for(int i = 0; i < G.size(); ++i){
 		// generate all possible neighbors
-		for(int j = 0; j < 12; ++j){
+		for(int j = 0; j < (3*L); ++j){
 			char cur_val = (i >> (2 * j)) % 4;
 			int base = i - (cur_val << (2*j));
 
@@ -250,7 +255,7 @@ void BFS(vector<Node>& G, vector<double>& scores, vector<int>& dist, vector<long
 }
 
 // Samples num_squares random squares of sequences (a wild-type, two single mutants and a corresponding double mutant) from the genotype network.
-vector<vector<int> > sample_squares(vector<Node>& G, vector<double>& scores, int num_squares){
+vector<vector<int> > sample_squares(vector<Node>& G, vector<double>& scores, int num_squares, int L){
 	vector<vector<int>> squares;	// vector to store the results
 	for (int i = 0; i<num_squares; ++i) {
 		// the wildtype
@@ -263,7 +268,7 @@ vector<vector<int> > sample_squares(vector<Node>& G, vector<double>& scores, int
 		// first mutation
 		int pos1; int mut1; char cur_val1; 
 		// position of the mutation
-		pos1 = rand() % 12;
+		pos1 = rand() % (L*3);
 		while(true) {
 			// mutates to
 			mut1 = rand() % 4;
@@ -277,7 +282,7 @@ vector<vector<int> > sample_squares(vector<Node>& G, vector<double>& scores, int
 		int pos2; int mut2; char cur_val2; 
 		while(true) {
 			// position of the mutation
-			pos2 = rand() % 12;
+			pos2 = rand() % (L*3);
 			// the mutation is in a different position than the first one
 			if(pos2 != pos1) {
 				// mutates to
@@ -341,6 +346,7 @@ int main(int argc, char** argv){
 	string data_file_str = string(argv[1]);
 	string code_file_str = string(argv[2]);
 	string output_file_str = string(argv[3]);
+	int L = atoi(argv[4]);
 	
 	//read the genetic code
 	unordered_map<string, char> code; //GCA -> A
@@ -348,12 +354,12 @@ int main(int argc, char** argv){
 	
 	// read the genotype-phenotype landscape
 	vector<double> scores;
-	read_scores(data_file_str, scores, code);
+	read_scores(data_file_str, scores, code, L);
 
 	//construct the genotype network
 	vector<Node> G;
 	unordered_map<string, int> node_names;
-	build_graph(G, code, node_names, scores);
+	build_graph(G, code, node_names, scores, L);
 
 	// find global maxima
 	vector<int> global_max;
@@ -381,7 +387,7 @@ int main(int argc, char** argv){
 
 	// epistasis
 	cout << "Epistasis" << endl;
-	vector<vector<int> > squares = sample_squares(G, scores, 1000000);
+	vector<vector<int> > squares = sample_squares(G, scores, 1000000, L);
 	vector<double> res = epistasis_types(squares, scores);
 	out_file << res[0] << "\t" << res[1] << "\t" << res[2] << "\t" << res[3] << "\t";
 

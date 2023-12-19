@@ -153,9 +153,6 @@ if __name__ == "__main__":
 	# landscape ruggedness (or evolutionary simulations) results
 	landscape_features = np.genfromtxt(featuresFile, delimiter="\t")
 
-	# delete the first row (header)
-	landscape_features = np.delete(landscape_features, 0, 0)
-
 	np.random.seed(0)
 	# generate n_random random amino acid indeces and compute the mean absolute change for each index for each code
 	res = np.zeros(shape=(n_random, landscape_features.shape[1]))

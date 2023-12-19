@@ -1,0 +1,207 @@
+---
+title: 'GB1: reducing dimensionality'
+author: "Hana Rozhonova"
+date: "2023-10-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+```
+
+# Ruggednesss
+## Read the data
+```{r}
+data = read.delim("output_ruggedness/results", header=FALSE)
+colnames(data) = c("Input", "NumPeaks", "MeanPeakHeight", "MagEpi", "SsEpi", "RsEpi", "PeakAcc")
+data$L = lapply(data$Input, function(x) strsplit(x, "_")[[1]][2])
+```
+
+## Number of peaks
+```{r}
+test = t.test(data$NumPeaks[data$L=="2"], alternative="l")
+p2_peaks = ggplot(data[data$L=="2",], aes(x=NumPeaks)) +
+  geom_histogram(alpha=0.5, color="black") + theme_test() +
+  geom_vline(xintercept=mean(data$NumPeaks[data$L=="2"]), linetype="dashed") +
+  labs(x="Correlation between code robustness\nand number of peaks", y="Count", title="L=2") +
+  xlim(c(-0.31, 0.31)) +
+  annotate("text", label=paste0("p=", signif(test$p.value, digits=3)),  x=Inf, y = Inf, vjust=1.25, hjust=1.1)
+
+test = t.test(data$NumPeaks[data$L=="3"], alternative="l")
+p3_peaks = ggplot(data[data$L=="3",], aes(x=NumPeaks)) +
+  geom_histogram(alpha=0.5, color="black") + theme_test() +
+  geom_vline(xintercept=mean(data$NumPeaks[data$L=="3"]), linetype="dashed") +
+  labs(x="Correlation between code robustness\nand number of peaks", y="Count", title="L=3") +
+  xlim(c(-0.31, 0.31)) +
+  annotate("text", label=paste0("p=", signif(test$p.value, digits=3)),  x=Inf, y = Inf, vjust=1.25, hjust=1.1)
+
+```
+
+## Magnitude epistasis
+```{r}
+p2_magEpi = ggplot(data[data$L=="2",], aes(x=MagEpi)) +
+  geom_histogram(alpha=0.5, color="black") + theme_test() +
+  geom_vline(xintercept=mean(data$MagEpi[data$L=="2"]), linetype="dashed") +
+  geom_vline(xintercept=median(data$MagEpi[data$L=="2"]), linetype="dotted") +
+  labs(x="Correlation between code robustness\nand prevalence of magnitude epistasis", y="Count", title="L=2")
+
+p3_magEpi = ggplot(data[data$L=="3",], aes(x=MagEpi)) +
+  geom_histogram(alpha=0.5, color="black") + theme_test() +
+  geom_vline(xintercept=mean(data$MagEpi[data$L=="3"]), linetype="dashed") +
+  geom_vline(xintercept=median(data$MagEpi[data$L=="3"]), linetype="dotted") +
+  labs(x="Correlation between code robustness\nand prevalence of magnitude epistasis", y="Count", title="L=3")
+
+```
+
+## Simple-sign epistasis
+```{r}
+p2_ssEpi = ggplot(data[data$L=="2",], aes(x=SsEpi)) +
+  geom_histogram(alpha=0.5, color="black") + theme_test() +
+  geom_vline(xintercept=mean(data$SsEpi[data$L=="2"]), linetype="dashed") +
+  geom_vline(xintercept=median(data$SsEpi[data$L=="2"]), linetype="dotted") +
+  labs(x="Correlation between code robustness\nand prevalence of simple-sign epistasis", y="Count", title="L=2")
+
+p3_ssEpi = ggplot(data[data$L=="3",], aes(x=SsEpi)) +
+  geom_histogram(alpha=0.5, color="black") + theme_test() +
+  geom_vline(xintercept=mean(data$SsEpi[data$L=="3"]), linetype="dashed") +
+  geom_vline(xintercept=median(data$SsEpi[data$L=="3"]), linetype="dotted") +
+  labs(x="Correlation between code robustness\nand prevalence of simple-sign epistasis", y="Count", title="L=3")
+
+```
+
+## Reciprocal-sign epistasis
+```{r}
+test = t.test(data$RsEpi[data$L=="2"], alternative="l")
+p2_rsEpi = ggplot(data[data$L=="2",], aes(x=RsEpi)) +
+  geom_histogram(alpha=0.5, color="black") + theme_test() +
+  geom_vline(xintercept=mean(data$RsEpi[data$L=="2"]), linetype="dashed") +
+  labs(x="Correlation between code robustness\nand prevalence of reciprocal-sign epistasis", y="Count", title="L=2") +
+  xlim(c(-0.31, 0.31)) +
+  annotate("text", label=paste0("p=", signif(test$p.value, digits=3)),  x=Inf, y = Inf, vjust=1.25, hjust=1.1)
+
+test = t.test(data$RsEpi[data$L=="3"], alternative="l")
+p3_rsEpi = ggplot(data[data$L=="3",], aes(x=RsEpi)) +
+  geom_histogram(alpha=0.5, color="black") + theme_test() +
+  geom_vline(xintercept=mean(data$RsEpi[data$L=="3"]), linetype="dashed") +
+  labs(x="Correlation between code robustness\nand prevalence of reciprocal-sign epistasis", y="Count", title="L=3") +
+  xlim(c(-0.31, 0.31)) +
+  annotate("text", label=paste0("p=", signif(test$p.value, digits=3)),  x=Inf, y = Inf, vjust=1.25, hjust=1.1)
+
+```
+
+## Accessibility of the global peak
+```{r}
+test = t.test(data$PeakAcc[data$L=="2"], alternative="g")
+p2_acc = ggplot(data[data$L=="2",], aes(x=PeakAcc)) +
+  geom_histogram(alpha=0.5, color="black") + theme_test() +
+  geom_vline(xintercept=mean(data$PeakAcc[data$L=="2"]), linetype="dashed") +
+  labs(x="Correlation between code robustness\nand accessibility of the global peak", y="Count", title="L=2") +
+  xlim(c(-0.31, 0.31)) +
+  annotate("text", label=paste0("p=", signif(test$p.value, digits=3)),  x=Inf, y = Inf, vjust=1.25, hjust=1.1)
+
+test = t.test(data$PeakAcc[data$L=="3"], alternative="g")
+p3_acc = ggplot(data[data$L=="3",], aes(x=PeakAcc)) +
+  geom_histogram(alpha=0.5, color="black") + theme_test() +
+  geom_vline(xintercept=mean(data$PeakAcc[data$L=="3"]), linetype="dashed") +
+  labs(x="Correlation between code robustness\nand accessibility of the global peak", y="Count", title="L=3") +
+  xlim(c(-0.31, 0.31)) +
+  annotate("text", label=paste0("p=", signif(test$p.value, digits=3)),  x=Inf, y = Inf, vjust=1.25, hjust=1.1)
+
+```
+
+## The final plot
+```{r}
+ggarrange(p2_peaks, p3_peaks,
+          #p2_magEpi, p3_magEpi,
+          #p2_ssEpi, p3_ssEpi,
+          p2_rsEpi, p3_rsEpi,
+          p2_acc, p3_acc,
+          ncol=2, nrow=3)
+ggsave("plot_dim_ruggedness.pdf", height=8.5, width=8)
+```
+
+# Greedy walks
+## Read the data
+```{r}
+data = read.delim("output_greedy_walks/results", header=FALSE)
+colnames(data) = c("Input", "MeanFitness", "MeanSteps", "X", "Entropy")
+data$L = lapply(data$Input, function(x) strsplit(x, "_")[[1]][2])
+```
+
+## Mean fitness
+```{r}
+test = t.test(data$MeanFitness[data$L=="2"], alternative="g")
+p2_fit = ggplot(data[data$L=="2",], aes(x=MeanFitness)) +
+  geom_histogram(alpha=0.5, color="black") + theme_test() +
+  geom_vline(xintercept=mean(data$MeanFitness[data$L=="2"]), linetype="dashed") +
+  labs(x="Correlation between code robustness\nand mean fitness reached by greedy walks", y="Count", title="L=2") +
+  xlim(c(-0.21, 0.21)) +
+  annotate("text", label=paste0("p=", signif(test$p.value, digits=3)),  x=Inf, y = Inf, vjust=1.25, hjust=1.1)
+
+test = t.test(data$MeanFitness[data$L=="3"], alternative="g")
+p3_fit = ggplot(data[data$L=="3",], aes(x=MeanFitness)) +
+  geom_histogram(alpha=0.5, color="black") + theme_test() +
+  geom_vline(xintercept=mean(data$MeanFitness[data$L=="3"]), linetype="dashed") +
+  labs(x="Correlation between code robustness\nand mean fitness reached by greedy walks", y="Count", title="L=3") +
+  xlim(c(-0.21, 0.21)) +
+  annotate("text", label=paste0("p=", signif(test$p.value, digits=3)),  x=Inf, y = Inf, vjust=1.25, hjust=1.1)
+
+```
+
+## Mean steps
+```{r}
+test = t.test(data$MeanSteps[data$L=="2"], alternative="g")
+p2_steps = ggplot(data[data$L=="2",], aes(x=MeanSteps)) +
+  geom_histogram(alpha=0.5, color="black") + theme_test() +
+  geom_vline(xintercept=mean(data$MeanSteps[data$L=="2"]), linetype="dashed") +
+  geom_vline(xintercept=median(data$MeanSteps[data$L=="2"]), linetype="dotted") +
+  labs(x="Correlation between code robustness\nand mean length of greedy walks", y="Count", title="L=2") +
+  xlim(c(-0.21, 0.21)) +
+  annotate("text", label=paste0("p=", signif(test$p.value, digits=3)),  x=Inf, y = Inf, vjust=1.25, hjust=1.1)
+
+test = t.test(data$MeanSteps[data$L=="3"], alternative="g")
+p3_steps = ggplot(data[data$L=="3",], aes(x=MeanSteps)) +
+  geom_histogram(alpha=0.5, color="black") + theme_test() +
+  geom_vline(xintercept=mean(data$MeanSteps[data$L=="3"]), linetype="dashed") +
+  geom_vline(xintercept=median(data$MeanSteps[data$L=="3"]), linetype="dotted") +
+  labs(x="Correlation between code robustness\nand mean length of greedy walks", y="Count", title="L=3") +
+  xlim(c(-0.21, 0.21)) +
+  annotate("text", label=paste0("p=", signif(test$p.value, digits=3)),  x=Inf, y = Inf, vjust=1.25, hjust=1.1)
+
+```
+
+## Entropy
+```{r}
+test = t.test(data$Entropy[data$L=="2"], alternative="l")
+p2_ent = ggplot(data[data$L=="2",], aes(x=Entropy)) +
+  geom_histogram(alpha=0.5, color="black") + theme_test() +
+  geom_vline(xintercept=mean(data$Entropy[data$L=="2"]), linetype="dashed") +
+  geom_vline(xintercept=median(data$Entropy[data$L=="2"]), linetype="dotted") +
+  labs(x="Correlation between code robustness\nand entropy of the distribution of peaks\nreached by greedy walks", y="Count", title="L=2") +
+  xlim(c(-0.21, 0.21)) +
+  annotate("text", label=paste0("p=", signif(test$p.value, digits=3)),  x=Inf, y = Inf, vjust=1.25, hjust=1.1)
+
+test = t.test(data$Entropy[data$L=="3"], alternative="l")
+p3_ent = ggplot(data[data$L=="3",], aes(x=Entropy)) +
+  geom_histogram(alpha=0.5, color="black") + theme_test() +
+  geom_vline(xintercept=mean(data$Entropy[data$L=="3"]), linetype="dashed") +
+  geom_vline(xintercept=median(data$Entropy[data$L=="3"]), linetype="dotted") +
+  labs(x="Correlation between code robustness\nand entropy of the distribution of peaks\nreached by greedy walks", y="Count", title="L=3") +
+  xlim(c(-0.21, 0.21)) +
+  annotate("text", label=paste0("p=", signif(test$p.value, digits=3)),  x=Inf, y = Inf, vjust=1.25, hjust=1.1)
+
+```
+
+## The final plot
+```{r}
+ggarrange(p2_fit, p3_fit,
+          p2_steps, p3_steps,
+          p2_ent, p3_ent,
+          ncol=2, nrow=3)
+ggsave("plot_dim_greedy.pdf", height=8.5, width=8)
+```
