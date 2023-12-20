@@ -37,8 +37,7 @@ map<int, char> nucs;
 double min_score = 1000;
 
 // function to read genetic code from file
-void read_code(string file_name, unordered_map<string, char>& code){
-	cerr << "reading code" << endl;	
+void read_code(string file_name){
 	const int lines_cnt = 64;
 	ifstream ifile;
 	ifile.open(file_name); 
@@ -179,7 +178,8 @@ int main(int argc, char** argv){
 	read_code(code_file_str);
 
 	// run the random walks
-	int num_starts = 100000;
+	//int num_starts = 100000;	// for the main analysis
+	int num_starts = 1000;		// for the dimensionality analysis
 	int walk_length = 1000;
 	pair< vector<double>, map<string,int>> res = run_random_walks(num_starts, walk_length, pop_size);
 		

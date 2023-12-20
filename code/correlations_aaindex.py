@@ -94,8 +94,16 @@ def rand_aa_permutation(standard_code, seed = 0):
 
 
 
-
-	
+def gen_all_neighbors(seq):
+	aas = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S',
+	'T', 'V', 'W', 'Y']
+	res = []
+	for i in range(len(seq)):
+		for aa in aas:
+			new_seq = seq[:i] + aa + seq[(i+1):]
+			if new_seq != seq:
+				res.append(new_seq)
+	return res
 
 ############## MAIN 
 
@@ -124,6 +132,7 @@ if __name__ == "__main__":
 				props = [float(x) for x in props]
 				aaindex[name] = props
 	aai.close()
+
 	# save as tsv
 	aas = ['A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V']
 	with open("output/aaindex_tsv.tsv", 'w') as f:
@@ -139,9 +148,40 @@ if __name__ == "__main__":
 		for i2 in range(i1+1, len(aas)):
 			aa_pairs += [aas[i1]+aas[i2]]
 
+	# add the empirical exchangeabilities (mean absolute fitness difference when changing X->Y, in different backgrounds)
+	dataFile = "../input/map.tsv"
+	data_dict = {}
+	with open(dataFile, 'r') as f:
+		data = f.read().split("\n")[1:]
+	for item in data:
+		if item!="":
+			seq = item.split()[0]
+			fitness = float(item.split()[1])
+			data_dict[seq] = fitness
+	empirical_diffs = [0]*len(aa_pairs)
+	num_contexts = [0]*len(aa_pairs)
+	for seq in data_dict.keys():
+		for i in range(len(seq)):
+			for aa in aas:
+				new_seq = seq[:i] + aa + seq[(i+1):]
+				if new_seq != seq:
+					aa_pair = seq[i]+new_seq[i] if seq[i]+new_seq[i] in aa_pairs else new_seq[i]+seq[i]
+					if data_dict[seq]!=-100 and data_dict[new_seq]!=-100:
+						fitness_diff = abs(data_dict[seq] - data_dict[new_seq])
+						ind = aa_pairs.index(aa_pair)
+						empirical_diffs[ind] += fitness_diff
+						num_contexts[ind] += 1
+	
+	empirical_diffs = [empirical_diffs[i]/num_contexts[i] for i in range(len(aa_pairs))]
+	with open("output/empirical_diffs.tsv", 'w') as f:
+		for i in range(len(aa_pairs)):
+			f.write(aa_pairs[i] + " \t" + str(empirical_diffs[i]) + '\n')
+	
+	
 	# the standard genetic code
 	standard_code = read_code("input/code_standard.tsv")
 
+	
 	# sizes of the global peak
 	file = "input/results_globalPeakSize"
 	with open(file, 'r') as f:
@@ -158,9 +198,10 @@ if __name__ == "__main__":
 		splitAa = [lines[x].split("\t")[1] for x in range(n_codes)]
 	notSplit = [splitAa[x] not in summitAas for x in range(n_codes)]
 	presSummit = [True if presSummit[x]==True and notSplit[x]==True else False for x in range(n_codes)]
+	
 
 	# create the matrix with numbers of aa-aa mutations allowed by each code
-	codes_mutations = np.zeros(shape=(n_codes, len(aa_pairs)))
+	codes_mutations = np.zeros(shape=(n_codes, len(aa_pairs)))	
 	for seed in range(n_codes):		
 		if seed==0:
 			# standard			
@@ -168,17 +209,17 @@ if __name__ == "__main__":
 		else:
 			code = rand_aa_permutation(standard_code, seed)
 		# compute the number of allowed amino acid substitutions
-		codes_mutations[seed,:] = number_of_mutations(code, aa_pairs)
+		codes_mutations[seed,:] = number_of_mutations(code, aa_pairs)	
 
 	print("codes done")
+
+	corrs_with_empirical = {}
 
 	with open(outputFile, 'w') as rf:
 		# landscape ruggedness (or evolutionary simulations) results
 		landscape_features = np.genfromtxt(featuresFile, delimiter="\t")
 
-		# delete the first row (header)
-		landscape_features = np.delete(landscape_features, 0, 0)
-
+		
 		# for each property, compute the correlation with each results feature
 		for prop, prop_vec in aaindex.items():
 			# differences in the property among amino acid pairs
@@ -194,3 +235,25 @@ if __name__ == "__main__":
 
 			# write to the output file
 			rf.write('\t'.join([str(x) for x in [prop] + res]) + "\n")
+
+			# correlation with the empirical fitness differences
+			corrs_with_empirical[prop] = np.corrcoef(diff_vec, empirical_diffs)[0,1]
+		
+
+		# empirical diffs
+		ermc = np.matmul(codes_mutations, empirical_diffs)
+		with open("output/ermc_emp", 'w') as f:
+			for i in range(100000):
+				f.write('\t'.join([str(i), str(ermc[i])]) + "\n")
+
+		res = [np.corrcoef(landscape_features[:,i], ermc)[0,1] for i in range(landscape_features.shape[1])]
+		# for the columns specified in pathsCol, only compute the correlation for codes that preserve the size of the global peak and under which the 
+		# global peak forms a single connected region in the genotype space
+		for p in pathsCol:
+			res[p] = np.corrcoef(landscape_features[presSummit,p], ermc[presSummit])[0,1]
+		# write to the output file
+		rf.write('\t'.join([str(x) for x in ["empirical"] + res]) + "\n")
+
+	with open("output/corrs_with_empirical.tsv", 'w') as f:
+		for prop, corr in corrs_with_empirical.items():
+			f.write("\t".join([prop, str(corr)]) + "\n")

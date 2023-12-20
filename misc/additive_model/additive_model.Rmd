@@ -105,3 +105,61 @@ summary(model_pare2)
 
 The linear model explains ca 84.5 % of variance.
 
+# ParB
+## ParS
+Read the data:
+```{r}
+data_parS = read.csv("../../ParS/01_vcregression/output/map.txt", stringsAsFactors = FALSE)
+```
+
+Create a data frame with 80 dummy variables (4 positions x 20 amino acis) and the scores:
+```{r}
+df_parS = data.frame(matrix(0, nrow=nrow(data_parS), ncol=81))
+colnames(df_parS) = c("Score", paste0(rep(c(1,2,3,4), each=20), rep(c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y"), 4)))
+
+for (i in 1:nrow(data_parS)) {
+  genotype = data_parS$sequence[i]
+  df_parS$Score[i] = data_parS$phenotype[i]
+  for (j in 1:4) {
+    col = paste0(j, substr(genotype, j, j))
+    df_parS[i,col] = 1
+  }
+}
+```
+
+Fit a linear model:
+```{r}
+model_parS = lm(Score ~ ., data=df_parS)
+summary(model_parS)
+```
+
+The linear model explains ca 66.2 % of variance.
+
+## NBS
+Read the data:
+```{r}
+data_NBS = read.csv("../../NBS/01_vcregression/output/map.txt", stringsAsFactors = FALSE)
+```
+
+Create a data frame with 80 dummy variables (4 positions x 20 amino acis) and the scores:
+```{r}
+df_NBS = data.frame(matrix(0, nrow=nrow(data_NBS), ncol=81))
+colnames(df_NBS) = c("Score", paste0(rep(c(1,2,3,4), each=20), rep(c("A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y"), 4)))
+
+for (i in 1:nrow(data_NBS)) {
+  genotype = data_NBS$sequence[i]
+  df_NBS$Score[i] = data_NBS$phenotype[i]
+  for (j in 1:4) {
+    col = paste0(j, substr(genotype, j, j))
+    df_NBS[i,col] = 1
+  }
+}
+```
+
+Fit a linear model:
+```{r}
+model_NBS = lm(Score ~ ., data=df_NBS)
+summary(model_NBS)
+```
+
+The linear model explains ca 52.5 % of variance.

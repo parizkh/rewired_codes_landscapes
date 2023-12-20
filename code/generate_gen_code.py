@@ -64,6 +64,33 @@ def rand_aa_permutation(standard_code, seed = 0):
 	return code
 
 
+'''
+Amino acid permutation, restricted to only those permutation that preserve the number of codons per aa.
+parameters: 
+	standard_code ... dictionary providing the standard genetic code; keys = codons, values = amino acids
+	seed ... random seed (default 0)
+'''
+def rand_aa_permutation_restricted(standard_code, seed = 0):
+	np.random.seed(seed)
+	# dictionary to store the code
+	code = {}
+	# aas, ordered by number of codons
+	aas = ["M", "W", "C", "D", "E", "F", "H", "K", "N", "Q", "Y", "I", "A", "G", "P", "T", "V", "L", "R", "S", "*"]
+	# randomly shuffle the amino acids, preserving the size
+	shuffled_aas_1 = np.random.permutation(2)
+	shuffled_aas_2 = [x+2 for x in np.random.permutation(9)]
+	shuffled_aas_3 = [11]
+	shuffled_aas_4 = [x+12 for x in np.random.permutation(5)]
+	shuffled_aas_6 = [x+17 for x in np.random.permutation(3)]
+	shuffled_aas = np.concatenate((shuffled_aas_1, shuffled_aas_2, shuffled_aas_3, shuffled_aas_4, shuffled_aas_6, [20]))
+	# the last one is stop codon
+	shuffled_aas = np.append(shuffled_aas, [20])
+	# go over the standard code and always change amino acid i to shuffled_aas[i]
+	for codon, aa in standard_code.items():
+		code[codon] = aas[shuffled_aas[aas.index(aa)]]
+	return code
+
+
 
 ''' 
 Random codon assignemnt:
@@ -162,13 +189,15 @@ if seed==0:
 	code = standard_code
 elif randType=="aa_permutation":
 	code = rand_aa_permutation(standard_code, seed)
+elif randType=="aa_permutation_restricted":
+	code = rand_aa_permutation_restricted(standard_code, seed)
 elif randType=="random":
 	code = rand_randomAssignment(standard_code, seed)
 
 # compute robustnes of the code
 rob = robustness(code, physchem_groups)	
 # for aa permutation: the amino acid occupying the split codon block
-if randType=="aa_permutation":
+if randType=="aa_permutation" or randType=="aa_permutation_restricted":
 	X = code["UCU"]		
 
 # save the code to file
@@ -178,7 +207,7 @@ with open(codeFile, 'w') as f:
 		f.write(aa+"\t"+codon+"\n")
 
 # write the statistics to outputFile
-if randType=="aa_permutation":
+if randType=="aa_permutation" or randType=="aa_permutation_restricted":
 	of.write('\t'.join([str(x) for x in [seed, X, rob]]) + "\t")
 else:
 	of.write('\t'.join([str(x) for x in [seed, rob]]) + "\t")
