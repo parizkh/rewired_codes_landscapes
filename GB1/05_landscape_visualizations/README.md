@@ -53,14 +53,23 @@ re we can easily appreciate the new connectivity between the different aminoacid
 | G | GTG W   | GCG S   | GAG A   | GGG L   | G |
 |---|---------|---------|---------|---------|---|
 
-### Calculating coordinates of the visualization under rewired codes
+### Visualizing the protein landscape
 
-We precalculate these coordinates because with such a big landscape containing over 16 million genotypes it can take up to a couple of hours and lots of memory. We recommend to run these calculations in parallel using a high performance computing cluster requiring at least 20GB per job.
+We start by generating a visualization of the protein landscape comprising 160,000 sequences, which can be done relatively quickly in a regular laptop. This script will generate the visualization in Supplementary Figure S6, the sequence logos representing the main regions of functional sequences and a third plot with labels of other sequences of interest on top of them.
 
 ```
 #Create link to inferred landscape
 ln -s ../01_vcregression/output/map.txt protein_landscape.csv
 
+bash 0_protein_landscape.sh
+```
+
+
+### Calculating coordinates of the visualization under rewired codes
+
+We precalculate these coordinates because with such a big landscape containing over 16 million genotypes it can take up to a couple of hours and lots of memory. We recommend to run these calculations in parallel using a high performance computing cluster requiring at least 20GB per job.
+
+```
 bash 1_calculate_visualization.sh
 ```
 
